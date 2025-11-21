@@ -187,7 +187,7 @@ def analyze_with_yandexgpt(text):
             "modelUri": f"gpt://{YANDEX_FOLDER_ID}/yandexgpt-lite/latest",
             "completionOptions": {
                 "stream": False,
-                "temperature": 0.1,
+                "temperature': 0.1,
                 "maxTokens": 2000
             },
             "messages": [
@@ -802,68 +802,68 @@ def admin_panel():
         </div>
 
         <script>
-            function loadUsers() {
+            function loadUsers() {{
                 location.reload();
-            }
+            }}
 
-            function setUserPlan() {
+            function setUserPlan() {{
                 const userId = document.getElementById('userId').value;
                 const plan = document.getElementById('planSelect').value;
                 
-                if (!userId) {
+                if (!userId) {{
                     alert('Введите ID пользователя');
                     return;
-                }
+                }}
                 
-                fetch('/admin/set-plan', {
+                fetch('/admin/set-plan', {{
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId, plan: plan})
-                })
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{user_id: userId, plan: plan}})
+                }})
                 .then(r => r.json())
-                .then(result => {
+                .then(result => {{
                     alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
                     if (result.success) loadUsers();
-                })
-                .catch(error => {
+                }})
+                .catch(error => {{
                     alert('Ошибка сети: ' + error);
-                });
-            }
+                }});
+            }}
 
-            function resetAllLimits() {
-                if (confirm('Сбросить дневные лимиты для ВСЕХ пользователей?')) {
-                    fetch('/admin/reset-all-limits', {method: 'POST'})
+            function resetAllLimits() {{
+                if (confirm('Сбросить дневные лимиты для ВСЕХ пользователей?')) {{
+                    fetch('/admin/reset-all-limits', {{method: 'POST'}})
                     .then(r => r.json())
-                    .then(result => {
+                    .then(result => {{
                         alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
                         if (result.success) loadUsers();
-                    });
-                }
-            }
+                    }});
+                }}
+            }}
 
-            function createTestUser() {
-                fetch('/admin/create-test-user', {method: 'POST'})
+            function createTestUser() {{
+                fetch('/admin/create-test-user', {{method: 'POST'}})
                 .then(r => r.json())
-                .then(result => {
+                .then(result => {{
                     alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
                     if (result.success) loadUsers();
-                });
-            }
+                }});
+            }}
 
             // Поиск пользователей
-            document.getElementById('searchUsers').addEventListener('input', function(e) {
+            document.getElementById('searchUsers').addEventListener('input', function(e) {{
                 const searchTerm = e.target.value.toLowerCase();
                 const userCards = document.querySelectorAll('#usersList > div');
                 
-                userCards.forEach(card => {
+                userCards.forEach(card => {{
                     const userId = card.querySelector('strong').textContent.toLowerCase();
-                    if (userId.includes(searchTerm)) {
+                    if (userId.includes(searchTerm)) {{
                         card.style.display = 'block';
-                    } else {
+                    }} else {{
                         card.style.display = 'none';
-                    }
-                });
-            });
+                    }}
+                }});
+            }});
         </script>
     </body>
     </html>
