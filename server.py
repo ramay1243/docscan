@@ -30,24 +30,31 @@ users_db = {
     }
 }
 
+# ОБНОВЛЕННЫЕ ТАРИФЫ - 1 бесплатный, потом платные
 PLANS = {
     'free': {
-        'daily_limit': 3,
+        'daily_limit': 1,  # БЫЛО 3, ТЕПЕРЬ 1
         'ai_access': True,
         'price': 0,
         'name': 'Бесплатный'
     },
-    'premium': {
-        'daily_limit': 50,
+    'basic': {
+        'daily_limit': 10,  # 10 анализов в день
         'ai_access': True, 
-        'price': 490,
+        'price': 199,
+        'name': 'Базовый'
+    },
+    'premium': {
+        'daily_limit': 50,  # 50 анализов в день
+        'ai_access': True,
+        'price': 399,
         'name': 'Премиум'
     },
-    'business': {
-        'daily_limit': 1000,
+    'unlimited': {
+        'daily_limit': 1000,  # Фактически безлимит
         'ai_access': True,
-        'price': 1900,
-        'name': 'Бизнес'
+        'price': 800,
+        'name': 'Безлимитный'
     }
 }
 
@@ -198,7 +205,7 @@ def analyze_with_yandexgpt(text):
                 if any(marker in line_lower for marker in ['риск', 'проблем', 'опасност', 'недостаток', 'слаб']):
                     current_section = 'risks'
                     continue
-                elif any(marker in line_lower for marker in ['рекомендац', 'совет', 'улучшен', 'исправлен']):
+                elif any(marker in line_lower for marker in ['рекомендац', 'совet', 'улучшен', 'исправлен']):
                     current_section = 'recommendations'
                     continue
                 
@@ -281,7 +288,7 @@ def home():
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
             body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; display: flex; justify-content: center; align-items: center; }
-            .container { background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); max-width: 800px; width: 100%; }
+            .container { background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); max-width: 1000px; width: 100%; }
             .header { text-align: center; margin-bottom: 40px; }
             .logo { font-size: 3em; margin-bottom: 10px; }
             h1 { color: #2d3748; margin-bottom: 10px; font-size: 2.2em; }
@@ -332,6 +339,68 @@ def home():
             <div class="result" id="result">
                 <h3>✅ Анализ завершен</h3>
                 <div id="resultContent"></div>
+            </div>
+
+            <!-- ОБНОВЛЕННЫЕ ТАРИФЫ -->
+            <div class="plans" style="margin-top: 40px;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h3>💎 Выберите тариф</h3>
+                    <p>Попробуйте бесплатно, затем выберите подходящий план</p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <!-- Бесплатный тариф -->
+                    <div style="background: white; padding: 25px; border-radius: 15px; border: 2px solid #e53e3e; text-align: center;">
+                        <div style="font-size: 1.3em; font-weight: bold; margin-bottom: 10px; color: #e53e3e;">Бесплатный</div>
+                        <div style="font-size: 2em; font-weight: bold; color: #e53e3e; margin-bottom: 15px;">0₽</div>
+                        <ul style="list-style: none; margin-bottom: 20px; text-align: left;">
+                            <li style="padding: 5px 0;">✅ 1 анализ в день</li>
+                            <li style="padding: 5px 0;">✅ AI-анализ YandexGPT</li>
+                            <li style="padding: 5px 0;">✅ Все форматы файлов</li>
+                            <li style="padding: 5px 0;">❌ Ограниченный функционал</li>
+                        </ul>
+                        <button class="btn" disabled style="background: #e53e3e;">Текущий тариф</button>
+                    </div>
+                    
+                    <!-- Базовый тариф -->
+                    <div style="background: #f0fff4; padding: 25px; border-radius: 15px; border: 2px solid #38a169; text-align: center;">
+                        <div style="font-size: 1.3em; font-weight: bold; margin-bottom: 10px; color: #38a169;">Базовый</div>
+                        <div style="font-size: 2em; font-weight: bold; color: #38a169; margin-bottom: 15px;">199₽/мес</div>
+                        <ul style="list-style: none; margin-bottom: 20px; text-align: left;">
+                            <li style="padding: 5px 0;">🚀 10 анализов в день</li>
+                            <li style="padding: 5px 0;">🚀 Приоритетный AI-анализ</li>
+                            <li style="padding: 5px 0;">🚀 Быстрая обработка</li>
+                            <li style="padding: 5px 0;">💼 Для частного использования</li>
+                        </ul>
+                        <button class="btn" onclick="showUpgradeMessage('basic')" style="background: #38a169;">Выбрать</button>
+                    </div>
+                    
+                    <!-- Премиум тариф -->
+                    <div style="background: #ebf8ff; padding: 25px; border-radius: 15px; border: 2px solid #3182ce; text-align: center;">
+                        <div style="font-size: 1.3em; font-weight: bold; margin-bottom: 10px; color: #3182ce;">Премиум</div>
+                        <div style="font-size: 2em; font-weight: bold; color: #3182ce; margin-bottom: 15px;">399₽/мес</div>
+                        <ul style="list-style: none; margin-bottom: 20px; text-align: left;">
+                            <li style="padding: 5px 0;">💎 50 анализов в день</li>
+                            <li style="padding: 5px 0;">💎 Максимальная скорость</li>
+                            <li style="padding: 5px 0;">💎 Расширенная аналитика</li>
+                            <li style="padding: 5px 0;">💼 Для профессионалов</li>
+                        </ul>
+                        <button class="btn" onclick="showUpgradeMessage('premium')" style="background: #3182ce;">Выбрать</button>
+                    </div>
+                    
+                    <!-- Безлимитный тариф -->
+                    <div style="background: #faf5ff; padding: 25px; border-radius: 15px; border: 2px solid #805ad5; text-align: center;">
+                        <div style="font-size: 1.3em; font-weight: bold; margin-bottom: 10px; color: #805ad5;">Безлимитный</div>
+                        <div style="font-size: 2em; font-weight: bold; color: #805ad5; margin-bottom: 15px;">800₽/мес</div>
+                        <ul style="list-style: none; margin-bottom: 20px; text-align: left;">
+                            <li style="padding: 5px 0;">🔥 1000+ анализов в день</li>
+                            <li style="padding: 5px 0;">🔥 Приоритет 24/7</li>
+                            <li style="padding: 5px 0;">🔥 Персональная поддержка</li>
+                            <li style="padding: 5px 0;">💼 Для бизнеса</li>
+                        </ul>
+                        <button class="btn" onclick="showUpgradeMessage('unlimited')" style="background: #805ad5;">Выбрать</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -430,6 +499,15 @@ def home():
                 resultDiv.style.display = 'block';
                 resultDiv.scrollIntoView({ behavior: 'smooth' });
             }
+
+            function showUpgradeMessage(plan) {
+                const planNames = {
+                    'basic': 'Базовый (199₽/мес)',
+                    'premium': 'Премиум (399₽/мес)', 
+                    'unlimited': 'Безлимитный (800₽/мес)'
+                };
+                alert(`Тариф "${planNames[plan]}" будет доступен после подключения платежной системы!\\n\\nСвяжитесь с нами для оформления: example@email.com`);
+            }
         </script>
     </body>
     </html>
@@ -445,7 +523,7 @@ def analyze_document():
         plan = PLANS[user['plan']]
         return jsonify({
             'success': False,
-            'error': f'❌ Лимит исчерпан! Использовано {user["used_today"]}/{plan["daily_limit"]} сегодня.',
+            'error': f'❌ Бесплатный лимит исчерпан! Сегодня использовано 1/1 анализ.\\n\\n💎 Перейдите на платный тариф для продолжения использования:',
             'upgrade_required': True
         }), 402
     
@@ -544,7 +622,8 @@ if __name__ == '__main__':
     print("🚀 DocScan Server запущен!")
     print("🤖 YandexGPT: Активен")
     print("📄 PDF отчеты: Отключены")
-    print("💰 Бесплатный лимит: 3 анализа в день")
+    print("💰 Бесплатный лимит: 1 анализ в день")  # ОБНОВИЛОСЬ
+    print("💎 Платные тарифы: 199₽, 399₽, 800₽")  # ДОБАВИЛОСЬ
     
     # Для продакшена на Render
     port = int(os.environ.get('PORT', 5000))
