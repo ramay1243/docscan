@@ -279,7 +279,7 @@ def analyze_text(text, user_id='default'):
 def home():
     """Главная страница с интерфейсом"""
     return """
-    <!DOCTYPE html>
+        <!DOCTYPE html>
     <html lang="ru">
     <head>
         <meta charset="UTF-8">
@@ -323,7 +323,7 @@ def home():
                 <p style="color: #718096; margin-top: 15px;">PDF, DOCX, TXT (до 10MB)</p>
             </div>
 
-            <input type="file" id="fileInput" style="display: none;" accept=".pdf,.docx,.txt" onchange="handleFileSelect(this.files[0])">
+            <input type="file" id="fileInput" style="display: none;" accept=".pdf,.docx,.txt" onchange="handleFileSelect(event)">
             
             <div class="file-info" id="fileInfo" style="display: none;">
                 <strong>Выбран файл:</strong> <span id="fileName"></span>
@@ -341,15 +341,12 @@ def home():
                 <div id="resultContent"></div>
             </div>
 
-            <!-- ОБНОВЛЕННЫЕ ТАРИФЫ -->
             <div class="plans" style="margin-top: 40px;">
                 <div style="text-align: center; margin-bottom: 20px;">
                     <h3>💎 Выберите тариф</h3>
-                    <p>Попробуйте бесплатно, затем выберите подходящий план</p>
                 </div>
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
-                    <!-- Бесплатный тариф -->
                     <div style="background: white; padding: 25px; border-radius: 15px; border: 2px solid #e53e3e; text-align: center;">
                         <div style="font-size: 1.3em; font-weight: bold; margin-bottom: 10px; color: #e53e3e;">Бесплатный</div>
                         <div style="font-size: 2em; font-weight: bold; color: #e53e3e; margin-bottom: 15px;">0₽</div>
@@ -357,12 +354,10 @@ def home():
                             <li style="padding: 5px 0;">✅ 1 анализ в день</li>
                             <li style="padding: 5px 0;">✅ AI-анализ YandexGPT</li>
                             <li style="padding: 5px 0;">✅ Все форматы файлов</li>
-                            <li style="padding: 5px 0;">❌ Ограниченный функционал</li>
                         </ul>
                         <button class="btn" disabled style="background: #e53e3e;">Текущий тариф</button>
                     </div>
                     
-                    <!-- Базовый тариф -->
                     <div style="background: #f0fff4; padding: 25px; border-radius: 15px; border: 2px solid #38a169; text-align: center;">
                         <div style="font-size: 1.3em; font-weight: bold; margin-bottom: 10px; color: #38a169;">Базовый</div>
                         <div style="font-size: 2em; font-weight: bold; color: #38a169; margin-bottom: 15px;">199₽/мес</div>
@@ -370,35 +365,8 @@ def home():
                             <li style="padding: 5px 0;">🚀 10 анализов в день</li>
                             <li style="padding: 5px 0;">🚀 Приоритетный AI-анализ</li>
                             <li style="padding: 5px 0;">🚀 Быстрая обработка</li>
-                            <li style="padding: 5px 0;">💼 Для частного использования</li>
                         </ul>
-                        <button class="btn" onclick="showUpgradeMessage('basic')" style="background: #38a169;">Выбрать</button>
-                    </div>
-                    
-                    <!-- Премиум тариф -->
-                    <div style="background: #ebf8ff; padding: 25px; border-radius: 15px; border: 2px solid #3182ce; text-align: center;">
-                        <div style="font-size: 1.3em; font-weight: bold; margin-bottom: 10px; color: #3182ce;">Премиум</div>
-                        <div style="font-size: 2em; font-weight: bold; color: #3182ce; margin-bottom: 15px;">399₽/мес</div>
-                        <ul style="list-style: none; margin-bottom: 20px; text-align: left;">
-                            <li style="padding: 5px 0;">💎 50 анализов в день</li>
-                            <li style="padding: 5px 0;">💎 Максимальная скорость</li>
-                            <li style="padding: 5px 0;">💎 Расширенная аналитика</li>
-                            <li style="padding: 5px 0;">💼 Для профессионалов</li>
-                        </ul>
-                        <button class="btn" onclick="showUpgradeMessage('premium')" style="background: #3182ce;">Выбрать</button>
-                    </div>
-                    
-                    <!-- Безлимитный тариф -->
-                    <div style="background: #faf5ff; padding: 25px; border-radius: 15px; border: 2px solid #805ad5; text-align: center;">
-                        <div style="font-size: 1.3em; font-weight: bold; margin-bottom: 10px; color: #805ad5;">Безлимитный</div>
-                        <div style="font-size: 2em; font-weight: bold; color: #805ad5; margin-bottom: 15px;">800₽/мес</div>
-                        <ul style="list-style: none; margin-bottom: 20px; text-align: left;">
-                            <li style="padding: 5px 0;">🔥 1000+ анализов в день</li>
-                            <li style="padding: 5px 0;">🔥 Приоритет 24/7</li>
-                            <li style="padding: 5px 0;">🔥 Персональная поддержка</li>
-                            <li style="padding: 5px 0;">💼 Для бизнеса</li>
-                        </ul>
-                        <button class="btn" onclick="showUpgradeMessage('unlimited')" style="background: #805ad5;">Выбрать</button>
+                        <button class="btn" onclick="alert('Тариф будет доступен после подключения платежей')" style="background: #38a169;">Выбрать</button>
                     </div>
                 </div>
             </div>
@@ -407,16 +375,15 @@ def home():
         <script>
             let selectedFile = null;
 
-            function handleFileSelect(file) {
+            function handleFileSelect(event) {
+                const file = event.target.files[0];
                 if (!file) return;
                 
-                // Проверка типа файла
-                if (!file.name.match(/\\.(pdf|docx|txt)$/)) {
+                if (!file.name.match(/\.(pdf|docx|txt)$/)) {
                     alert('Пожалуйста, выберите файл в формате PDF, DOCX или TXT');
                     return;
                 }
 
-                // Проверка размера
                 if (file.size > 10 * 1024 * 1024) {
                     alert('Файл слишком большой. Максимальный размер: 10MB');
                     return;
@@ -431,7 +398,6 @@ def home():
             async function analyzeDocument() {
                 if (!selectedFile) return;
 
-                // Показываем загрузку
                 document.getElementById('loading').style.display = 'block';
                 document.getElementById('analyzeBtn').disabled = true;
 
@@ -439,13 +405,11 @@ def home():
                     const formData = new FormData();
                     formData.append('file', selectedFile);
 
-                    // Исправленный URL - используем текущий домен
                     const response = await fetch(window.location.origin + '/analyze', {
                         method: 'POST',
                         body: formData
                     });
 
-                    // Проверяем статус ответа
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
@@ -461,42 +425,18 @@ def home():
                         document.getElementById('analyzeBtn').disabled = false;
                     }
 
-               } catch (error) {
-    document.getElementById('loading').style.display = 'none';
-    
-    // Если ошибка 402 - показываем красивое сообщение о лимите
-    if (error.message.includes('402')) {
-        // Создаем красивый попап вместо alert
-        const popup = document.createElement('div');
-        popup.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.5); display: flex; justify-content: center; 
-            align-items: center; z-index: 1000;
-        `;
-        popup.innerHTML = `
-            <div style="background: white; padding: 30px; border-radius: 15px; max-width: 500px; text-align: center;">
-                <h3 style="color: #e53e3e; margin-bottom: 20px;">❌ Лимит исчерпан</h3>
-                <p>Сегодня вы использовали <strong>1/1</strong> бесплатный анализ</p>
-                <p style="margin: 20px 0; color: #718096;">💎 Перейдите на платный тариф для продолжения использования</p>
-                <div style="background: #f7fafc; padding: 15px; border-radius: 10px; margin: 20px 0;">
-                    <p><strong>Доступные тарифы:</strong></p>
-                    <p>• Базовый - 199₽/мес (10 анализов в день)</p>
-                    <p>• Премиум - 399₽/мес (50 анализов в день)</p>
-                    <p>• Безлимитный - 800₽/мес (1000+ анализов)</p>
-                </div>
-                <button onclick="this.parentElement.parentElement.remove()" 
-                        style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
-                    Понятно
-                </button>
-            </div>
-        `;
-        document.body.appendChild(popup);
-    } else {
-        alert('Ошибка соединения: ' + error.message);
-    }
-    
-    document.getElementById('analyzeBtn').disabled = false;
-}
+                } catch (error) {
+                    document.getElementById('loading').style.display = 'none';
+                    
+                    if (error.message.includes('402')) {
+                        alert('❌ Бесплатный лимит исчерпан!\\n\\nСегодня вы использовали 1/1 бесплатный анализ.\\n\\n💎 Перейдите на платный тариф для продолжения.');
+                    } else {
+                        alert('Ошибка соединения: ' + error.message);
+                    }
+                    
+                    document.getElementById('analyzeBtn').disabled = false;
+                }
+            }
 
             function showResult(data) {
                 const resultDiv = document.getElementById('result');
@@ -528,15 +468,6 @@ def home():
                 
                 resultDiv.style.display = 'block';
                 resultDiv.scrollIntoView({ behavior: 'smooth' });
-            }
-
-            function showUpgradeMessage(plan) {
-                const planNames = {
-                    'basic': 'Базовый (199₽/мес)',
-                    'premium': 'Премиум (399₽/мес)', 
-                    'unlimited': 'Безлимитный (800₽/мес)'
-                };
-                alert(`Тариф "${planNames[plan]}" будет доступен после подключения платежной системы!\\n\\nСвяжитесь с нами для оформления: example@email.com`);
             }
         </script>
     </body>
@@ -658,4 +589,5 @@ if __name__ == '__main__':
     # Для продакшена на Render
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
