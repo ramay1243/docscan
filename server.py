@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import PyPDF2
 import docx
@@ -7,6 +7,7 @@ import tempfile
 import os
 import uuid
 from datetime import datetime, date
+
 
 app = Flask(__name__)
 CORS(app)
@@ -266,7 +267,9 @@ def analyze_text(text, user_id='default'):
         'recommendations': ['💎 Перейдите на премиум для AI-анализа'],
         'ai_used': False
     }
-
+@app.route('/')
+def serve_index():
+    return send_file('index.html')
 # API endpoints
 @app.route('/analyze', methods=['POST'])
 def analyze_document():
@@ -382,4 +385,5 @@ if __name__ == '__main__':
     # Для продакшена на Render
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
