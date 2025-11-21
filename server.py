@@ -461,12 +461,42 @@ def home():
                         document.getElementById('analyzeBtn').disabled = false;
                     }
 
-                } catch (error) {
-                    document.getElementById('loading').style.display = 'none';
-                    alert('Ошибка соединения: ' + error.message);
-                    document.getElementById('analyzeBtn').disabled = false;
-                }
-            }
+               } catch (error) {
+    document.getElementById('loading').style.display = 'none';
+    
+    // Если ошибка 402 - показываем красивое сообщение о лимите
+    if (error.message.includes('402')) {
+        // Создаем красивый попап вместо alert
+        const popup = document.createElement('div');
+        popup.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); display: flex; justify-content: center; 
+            align-items: center; z-index: 1000;
+        `;
+        popup.innerHTML = `
+            <div style="background: white; padding: 30px; border-radius: 15px; max-width: 500px; text-align: center;">
+                <h3 style="color: #e53e3e; margin-bottom: 20px;">❌ Лимит исчерпан</h3>
+                <p>Сегодня вы использовали <strong>1/1</strong> бесплатный анализ</p>
+                <p style="margin: 20px 0; color: #718096;">💎 Перейдите на платный тариф для продолжения использования</p>
+                <div style="background: #f7fafc; padding: 15px; border-radius: 10px; margin: 20px 0;">
+                    <p><strong>Доступные тарифы:</strong></p>
+                    <p>• Базовый - 199₽/мес (10 анализов в день)</p>
+                    <p>• Премиум - 399₽/мес (50 анализов в день)</p>
+                    <p>• Безлимитный - 800₽/мес (1000+ анализов)</p>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" 
+                        style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+                    Понятно
+                </button>
+            </div>
+        `;
+        document.body.appendChild(popup);
+    } else {
+        alert('Ошибка соединения: ' + error.message);
+    }
+    
+    document.getElementById('analyzeBtn').disabled = false;
+}
 
             function showResult(data) {
                 const resultDiv = document.getElementById('result');
@@ -628,3 +658,4 @@ if __name__ == '__main__':
     # Для продакшена на Render
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
