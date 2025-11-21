@@ -10,7 +10,7 @@ from datetime import datetime, date
 
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 import os
 from dotenv import load_dotenv
@@ -385,5 +385,6 @@ if __name__ == '__main__':
     # Для продакшена на Render
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
