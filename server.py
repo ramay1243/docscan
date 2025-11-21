@@ -375,8 +375,11 @@ def home():
 
 if __name__ == '__main__':
     print("🚀 DocScan Server запущен!")
-    print("📍 Адрес: http://localhost:5000")
     print("🤖 YandexGPT: Активен")
     print("📄 PDF отчеты: Отключены")
     print("💰 Бесплатный лимит: 3 анализа в день")
-    app.run(debug=True, port=5000)
+    
+    # Для продакшена на Render
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
+
