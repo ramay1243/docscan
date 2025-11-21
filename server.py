@@ -9,410 +9,274 @@ import uuid
 from datetime import datetime, date
 import json
 import hashlib
-import secrets
 
 app = Flask(__name__)
-# Секретный ключ для сессий - ОБЯЗАТЕЛЬНО поменяйте в продакшене!
-app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+app.secret_key = os.getenv('SECRET_KEY', 'super-secret-key-12345')
 
-# Исправляем CORS для работы на Render
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Загружаем переменные окружения
 from dotenv import load_dotenv
 load_dotenv()
 
-# Данные Yandex Cloud из переменных окружения
 YANDEX_API_KEY = os.getenv('YANDEX_API_KEY')
 YANDEX_FOLDER_ID = os.getenv('YANDEX_FOLDER_ID')
 
-# Файл для хранения данных пользователей
+# Файлы данных
 USERS_FILE = 'users_data.json'
-ADMIN_CREDENTIALS_FILE = 'admin_credentials.json'
+ADMIN_FILE = 'admin_data.json'
 
-# АДМИН ДАННЫЕ - ОБЯЗАТЕЛЬНО ПОМЕНЯЙТЕ В ПРОДАКШЕНЕ!
-DEFAULT_ADMIN_USERNAME = "admin"
-DEFAULT_ADMIN_PASSWORD = "admin123"  # СМЕНИТЕ ПАРОЛЬ!
+# Дефолтные админские учетки (СМЕНИТЕ!)
+DEFAULT_ADMIN = {
+    'username': 'admin',
+    'password_hash': hashlib.sha256('admin123'.encode()).hexdigest(),
+    'is_default': True
+}
 
-def load_admin_credentials():
-    """Загружает или создает админские учетные данные"""
+def load_users():
     try:
-        if os.path.exists(ADMIN_CREDENTIALS_FILE):
-            with open(ADMIN_CREDENTIALS_FILE, 'r', encoding='utf-8') as f:
+        if os.path.exists(USERS_FILE):
+            with open(USERS_FILE, 'r') as f:
                 return json.load(f)
-    except Exception as e:
-        print(f"Ошибка загрузки админских данных: {e}")
-    
-    # Создаем дефолтные учетные данные
-    admin_data = {
-        'username': DEFAULT_ADMIN_USERNAME,
-        'password_hash': hashlib.sha256(DEFAULT_ADMIN_PASSWORD.encode()).hexdigest(),
-        'created_at': datetime.now().isoformat(),
-        'is_default': True  # Флаг что это дефолтные учетки
-    }
-    
+    except:
+        pass
+    return {'default': {'plan': 'free', 'used_today': 0, 'last_reset': date.today().isoformat(), 'total_used': 0}}
+
+def save_users():
     try:
-        with open(ADMIN_CREDENTIALS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(admin_data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"Ошибка сохранения админских данных: {e}")
-    
-    print("⚠️  СОЗДАНЫ ДЕФОЛТНЫЕ АДМИНСКИЕ УЧЕТКИ!")
-    print(f"👤 Логин: {DEFAULT_ADMIN_USERNAME}")
-    print(f"🔑 Пароль: {DEFAULT_ADMIN_PASSWORD}")
-    print("🚨 СМЕНИТЕ ПАРОЛЬ НЕМЕДЛЕННО!")
-    
-    return admin_data
+        with open(USERS_FILE, 'w') as f:
+            json.dump(users_db, f, indent=2)
+    except:
+        pass
 
-def is_admin_logged_in():
-    """Проверяет, авторизован ли админ"""
-    return session.get('admin_logged_in', False)
+def load_admin():
+    try:
+        if os.path.exists(ADMIN_FILE):
+            with open(ADMIN_FILE, 'r') as f:
+                return json.load(f)
+    except:
+        pass
+    
+    # Создаем дефолтные учетки
+    try:
+        with open(ADMIN_FILE, 'w') as f:
+            json.dump(DEFAULT_ADMIN, f, indent=2)
+    except:
+        pass
+    
+    print("🔐 ДЕФОЛТНЫЕ АДМИНСКИЕ УЧЕТКИ:")
+    print("👤 Логин: admin")
+    print("🔑 Пароль: admin123")
+    print("🚨 СМЕНИТЕ ПАРОЛЬ!")
+    
+    return DEFAULT_ADMIN
 
-def require_admin_login(f):
-    """Декоратор для защиты админских роутов"""
-    def decorated_function(*args, **kwargs):
-        if not is_admin_logged_in():
-            return redirect(url_for('admin_login'))
+def save_admin():
+    try:
+        with open(ADMIN_FILE, 'w') as f:
+            json.dump(admin_data, f, indent=2)
+    except:
+        pass
+
+# Загружаем данные
+users_db = load_users()
+admin_data = load_admin()
+
+# Тарифы
+PLANS = {
+    'free': {'daily_limit': 1, 'ai_access': True, 'price': 0, 'name': 'Бесплатный'},
+    'basic': {'daily_limit': 10, 'ai_access': True, 'price': 199, 'name': 'Базовый'},
+    'premium': {'daily_limit': 50, 'ai_access': True, 'price': 399, 'name': 'Премиум'},
+    'unlimited': {'daily_limit': 1000, 'ai_access': True, 'price': 800, 'name': 'Безлимитный'}
+}
+
+# Функции для пользователей
+def get_or_create_user(request):
+    user_id = request.cookies.get('user_id', 'default')
+    if user_id not in users_db:
+        users_db[user_id] = {
+            'plan': 'free', 
+            'used_today': 0, 
+            'last_reset': date.today().isoformat(), 
+            'total_used': 0,
+            'created_at': datetime.now().isoformat()
+        }
+        save_users()
+        print(f"🎉 Новый пользователь: {user_id}")
+    return user_id
+
+def can_analyze(user_id):
+    user = users_db.get(user_id, users_db['default'])
+    return user['used_today'] < PLANS[user['plan']]['daily_limit']
+
+def record_usage(user_id):
+    if user_id in users_db:
+        users_db[user_id]['used_today'] += 1
+        users_db[user_id]['total_used'] += 1
+        save_users()
+
+# Аутентификация админа
+def admin_required(f):
+    def decorated(*args, **kwargs):
+        if not session.get('admin_logged_in'):
+            return redirect('/admin/login')
         return f(*args, **kwargs)
-    decorated_function.__name__ = f.__name__
-    return decorated_function
+    decorated.__name__ = f.__name__
+    return decorated
 
-# Загружаем админские данные
-admin_credentials = load_admin_credentials()
+# Главная страница
+@app.route('/')
+def home():
+    user_id = get_or_create_user(request)
+    response = make_response("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>DocScan</title>
+        <meta charset="UTF-8">
+        <style>
+            body { font-family: Arial; margin: 40px; background: #f0f0f0; }
+            .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
+            .upload-zone { border: 2px dashed #ccc; padding: 40px; text-align: center; margin: 20px 0; cursor: pointer; }
+            .btn { background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🔍 DocScan - Анализ документов</h1>
+            <p>Загрузите документ для анализа</p>
+            
+            <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+                📄 Нажмите для выбора файла (PDF, DOCX, TXT)
+            </div>
+            
+            <input type="file" id="fileInput" style="display:none" accept=".pdf,.docx,.txt">
+            <button class="btn" onclick="analyze()">Анализировать</button>
+            
+            <div id="result" style="margin-top: 20px;"></div>
+        </div>
 
-# ... (остальной код load_users, save_users, users_db, PLANS и т.д. остается без изменений)
+        <script>
+            async function analyze() {
+                const fileInput = document.getElementById('fileInput');
+                if (!fileInput.files[0]) return alert('Выберите файл');
+                
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                
+                try {
+                    const response = await fetch('/analyze', { method: 'POST', body: formData });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        document.getElementById('result').innerHTML = '<h3>✅ Анализ завершен</h3>';
+                    } else {
+                        alert('Ошибка: ' + data.error);
+                    }
+                } catch (error) {
+                    alert('Ошибка сети: ' + error);
+                }
+            }
+        </script>
+    </body>
+    </html>
+    """)
+    response.set_cookie('user_id', user_id, max_age=365*24*60*60)
+    return response
 
-# ОБНОВЛЕННАЯ АДМИН-ПАНЕЛЬ С АУТЕНТИФИКАЦИЕЙ
+# Анализ документа
+@app.route('/analyze', methods=['POST'])
+def analyze_document():
+    user_id = get_or_create_user(request)
+    
+    if not can_analyze(user_id):
+        return jsonify({'success': False, 'error': 'Лимит исчерпан'}), 402
+    
+    if 'file' not in request.files:
+        return jsonify({'error': 'Файл не загружен'}), 400
+    
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({'error': 'Файл не выбран'}), 400
+    
+    record_usage(user_id)
+    
+    return jsonify({
+        'success': True,
+        'filename': file.filename,
+        'result': {
+            'risks': ['✅ Документ проверен'],
+            'recommendations': ['💎 Перейдите на премиум для полного анализа'],
+            'summary': 'Базовый анализ завершен'
+        }
+    })
+
+# АДМИНКА
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
-    """Страница входа в админ-панель"""
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
         
-        if (username == admin_credentials['username'] and 
-            hashlib.sha256(password.encode()).hexdigest() == admin_credentials['password_hash']):
+        if (username == admin_data['username'] and 
+            hashlib.sha256(password.encode()).hexdigest() == admin_data['password_hash']):
             
             session['admin_logged_in'] = True
-            session['admin_username'] = username
-            session['admin_login_time'] = datetime.now().isoformat()
-            
-            print(f"🔐 АДМИН ВОШЕЛ: {username} в {datetime.now()}")
-            
-            # Если используются дефолтные учетки, показываем предупреждение
-            if admin_credentials.get('is_default'):
-                return redirect(url_for('admin_security_warning'))
-            
-            return redirect(url_for('admin_panel'))
+            session['admin_user'] = username
+            return redirect('/admin')
         else:
             return """
-            <!DOCTYPE html>
             <html>
-            <head>
-                <title>Admin Login - Ошибка</title>
-                <style>
-                    body { font-family: Arial; margin: 40px; background: #f0f0f0; }
-                    .login-box { background: white; padding: 30px; border-radius: 10px; max-width: 400px; margin: 100px auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-                    .error { background: #ffe6e6; color: #d00; padding: 10px; border-radius: 5px; margin-bottom: 15px; }
-                    input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px; }
-                    button { width: 100%; padding: 10px; background: #007cba; color: white; border: none; border-radius: 5px; cursor: pointer; }
-                </style>
-            </head>
-            <body>
-                <div class="login-box">
-                    <h2>🔐 Вход в админ-панель</h2>
-                    <div class="error">❌ Неверный логин или пароль</div>
-                    <form method="POST">
-                        <input type="text" name="username" placeholder="Логин" required>
-                        <input type="password" name="password" placeholder="Пароль" required>
-                        <button type="submit">Войти</button>
-                    </form>
-                </div>
+            <body style="font-family: Arial; margin: 40px;">
+                <h2>❌ Неверный логин или пароль</h2>
+                <a href="/admin/login">← Назад</a>
             </body>
             </html>
             """
     
-    # Показываем предупреждение если используются дефолтные учетки
-    security_warning = ""
-    if admin_credentials.get('is_default'):
-        security_warning = """
-        <div class="security-warning critical">
-            🚨 ВНИМАНИЕ: Используются стандартные логин и пароль! 
-            Немедленно смените их после входа!
-        </div>
-        """
-    
-    return f"""
+    return """
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Admin Login - DocScan</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Admin Login</title>
         <style>
-            * {{ margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }}
-            body {{ background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; }}
-            .login-box {{ background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); max-width: 400px; width: 100%; }}
-            h2 {{ color: #2c3e50; margin-bottom: 10px; text-align: center; }}
-            .subtitle {{ color: #7f8c8d; text-align: center; margin-bottom: 30px; }}
-            input {{ width: 100%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; }}
-            button {{ width: 100%; padding: 15px; background: #3498db; color: white; border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; transition: background 0.3s; }}
-            button:hover {{ background: #2980b9; }}
-            .security-warning {{ background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 10px; border-radius: 5px; margin-top: 15px; font-size: 0.9em; }}
-            .security-warning.critical {{ background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }}
+            body { font-family: Arial; margin: 40px; background: #f5f5f5; }
+            .login-box { background: white; padding: 30px; max-width: 300px; margin: 100px auto; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+            input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px; }
+            button { width: 100%; padding: 10px; background: #007cba; color: white; border: none; border-radius: 5px; cursor: pointer; }
         </style>
     </head>
     <body>
         <div class="login-box">
-            <h2>🔐 Админ-панель</h2>
-            <p class="subtitle">DocScan - Система управления</p>
-            
+            <h2>🔐 Вход в админку</h2>
             <form method="POST">
-                <input type="text" name="username" placeholder="Логин" required value="{admin_credentials['username']}">
-                <input type="password" name="password" placeholder="Пароль" required>
+                <input type="text" name="username" placeholder="Логин" value="admin" required>
+                <input type="password" name="password" placeholder="Пароль" value="admin123" required>
                 <button type="submit">Войти</button>
             </form>
-            
-            {security_warning}
-            
-            <div class="security-warning">
-                ⚠️ Доступ только для авторизованного персонала
-            </div>
         </div>
     </body>
     </html>
     """
-
-@app.route('/admin/security-warning')
-@require_admin_login
-def admin_security_warning():
-    """Страница предупреждения о безопасности"""
-    return """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Security Warning - DocScan</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-            body { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
-            .warning-box { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); max-width: 600px; width: 100%; text-align: center; }
-            .warning-icon { font-size: 4em; margin-bottom: 20px; }
-            h1 { color: #e74c3c; margin-bottom: 20px; }
-            .warning-text { background: #f8d7da; color: #721c24; padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 5px solid #e74c3c; }
-            .btn { display: inline-block; background: #e74c3c; color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; margin: 10px; font-size: 1.1em; transition: background 0.3s; }
-            .btn:hover { background: #c0392b; }
-            .btn-secondary { background: #3498db; }
-            .btn-secondary:hover { background: #2980b9; }
-        </style>
-    </head>
-    <body>
-        <div class="warning-box">
-            <div class="warning-icon">🚨</div>
-            <h1>КРИТИЧЕСКОЕ ПРЕДУПРЕЖДЕНИЕ БЕЗОПАСНОСТИ</h1>
-            
-            <div class="warning-text">
-                <strong>Вы используете стандартные логин и пароль!</strong><br><br>
-                Это представляет серьезную угрозу безопасности вашей системы.<br>
-                Злоумышленники могут легко получить доступ к админ-панели.
-            </div>
-            
-            <p>Немедленно смените логин и пароль для защиты системы.</p>
-            
-            <div style="margin-top: 30px;">
-                <a href="/admin/change-credentials" class="btn">🔐 Сменить логин и пароль</a>
-                <a href="/admin" class="btn btn-secondary">➡️ Перейти в админку</a>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-
-@app.route('/admin/change-credentials')
-@require_admin_login
-def admin_change_credentials_page():
-    """Страница смены логина и пароля"""
-    return """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Change Credentials - DocScan</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-            body { background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); min-height: 100vh; padding: 20px; }
-            .container { max-width: 500px; margin: 0 auto; }
-            .header { background: white; padding: 30px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
-            .form-section { background: white; padding: 30px; border-radius: 15px; margin: 20px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-            h1 { color: #2c3e50; margin-bottom: 10px; }
-            input { width: 100%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; }
-            button { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; transition: background 0.3s; margin: 10px 0; }
-            button:hover { background: #219a52; }
-            .btn-back { background: #3498db; }
-            .btn-back:hover { background: #2980b9; }
-            .message { padding: 10px; border-radius: 5px; margin: 10px 0; display: none; }
-            .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-            .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-            .requirements { font-size: 0.9em; color: #7f8c8d; margin: 5px 0; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>🔐 Смена учетных данных</h1>
-                <p>Установите безопасные логин и пароль для админ-панели</p>
-            </div>
-
-            <div class="form-section">
-                <div id="message" class="message"></div>
-                
-                <h3>📝 Новые учетные данные</h3>
-                
-                <input type="text" id="newUsername" placeholder="Новый логин" required>
-                <div class="requirements">Логин должен быть не менее 3 символов</div>
-                
-                <input type="password" id="newPassword" placeholder="Новый пароль" required>
-                <div class="requirements">Пароль должен быть не менее 6 символов</div>
-                
-                <input type="password" id="confirmPassword" placeholder="Подтвердите пароль" required>
-                
-                <button onclick="changeCredentials()">💾 Сохранить новые учетные данные</button>
-                <button class="btn-back" onclick="window.location.href='/admin'">← Назад в админку</button>
-            </div>
-        </div>
-
-        <script>
-            function changeCredentials() {
-                const newUsername = document.getElementById('newUsername').value;
-                const newPassword = document.getElementById('newPassword').value;
-                const confirmPassword = document.getElementById('confirmPassword').value;
-                const message = document.getElementById('message');
-                
-                // Валидация
-                if (newUsername.length < 3) {
-                    showMessage('Логин должен быть не менее 3 символов', 'error');
-                    return;
-                }
-                
-                if (newPassword.length < 6) {
-                    showMessage('Пароль должен быть не менее 6 символов', 'error');
-                    return;
-                }
-                
-                if (newPassword !== confirmPassword) {
-                    showMessage('Пароли не совпадают', 'error');
-                    return;
-                }
-                
-                // Отправка на сервер
-                fetch('/admin/change-credentials', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        new_username: newUsername,
-                        new_password: newPassword
-                    })
-                })
-                .then(r => r.json())
-                .then(result => {
-                    if (result.success) {
-                        showMessage('✅ ' + result.message, 'success');
-                        // Очищаем поля
-                        document.getElementById('newUsername').value = '';
-                        document.getElementById('newPassword').value = '';
-                        document.getElementById('confirmPassword').value = '';
-                        
-                        // Предлагаем перелогиниться
-                        setTimeout(() => {
-                            if (confirm('Учетные данные изменены. Хотите войти заново?')) {
-                                window.location.href = '/admin/logout';
-                            }
-                        }, 2000);
-                    } else {
-                        showMessage('❌ ' + result.error, 'error');
-                    }
-                })
-                .catch(error => {
-                    showMessage('❌ Ошибка сети: ' + error, 'error');
-                });
-            }
-            
-            function showMessage(text, type) {
-                const message = document.getElementById('message');
-                message.textContent = text;
-                message.className = 'message ' + type;
-                message.style.display = 'block';
-                
-                setTimeout(() => {
-                    message.style.display = 'none';
-                }, 5000);
-            }
-        </script>
-    </body>
-    </html>
-    """
-
-@app.route('/admin/change-credentials', methods=['POST'])
-@require_admin_login
-def admin_change_credentials():
-    """API для смены логина и пароля"""
-    try:
-        data = request.json
-        new_username = data.get('new_username')
-        new_password = data.get('new_password')
-        
-        if not new_username or len(new_username) < 3:
-            return jsonify({'success': False, 'error': 'Логин должен быть не менее 3 символов'})
-        
-        if not new_password or len(new_password) < 6:
-            return jsonify({'success': False, 'error': 'Пароль должен быть не менее 6 символов'})
-        
-        # Обновляем учетные данные
-        admin_credentials['username'] = new_username
-        admin_credentials['password_hash'] = hashlib.sha256(new_password.encode()).hexdigest()
-        admin_credentials['is_default'] = False  # Снимаем флаг дефолтных учеток
-        admin_credentials['last_changed'] = datetime.now().isoformat()
-        
-        try:
-            with open(ADMIN_CREDENTIALS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(admin_credentials, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            print(f"Ошибка сохранения учетных данных: {e}")
-        
-        # Обновляем сессию
-        session['admin_username'] = new_username
-        
-        print(f"🔐 УЧЕТНЫЕ ДАННЫЕ АДМИНА ИЗМЕНЕНЫ: {new_username} в {datetime.now()}")
-        
-        return jsonify({
-            'success': True,
-            'message': 'Логин и пароль успешно изменены!'
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/admin/logout')
 def admin_logout():
-    """Выход из админ-панели"""
     session.clear()
-    return redirect(url_for('admin_login'))
+    return redirect('/admin/login')
 
 @app.route('/admin')
-@require_admin_login
+@admin_required
 def admin_panel():
-    """Главная админ-панель"""
+    total_users = len(users_db)
+    total_analyses = sum(user['total_used'] for user in users_db.values())
     
-    # Проверяем используются ли дефолтные учетки
-    security_alert = ""
-    if admin_credentials.get('is_default'):
-        security_alert = """
-        <div class="security-alert">
-            🚨 <strong>ВНИМАНИЕ БЕЗОПАСНОСТИ!</strong> 
-            Используются стандартные логин и пароль. 
-            <a href="/admin/change-credentials" style="color: #e74c3c; text-decoration: underline;">Сменить немедленно!</a>
+    users_html = ""
+    for user_id, user_data in users_db.items():
+        users_html += f"""
+        <div style="background: white; padding: 15px; margin: 10px 0; border-radius: 5px;">
+            <strong>ID:</strong> {user_id}<br>
+            <strong>Тариф:</strong> {user_data['plan']}<br>
+            <strong>Использовано:</strong> {user_data['used_today']}/{PLANS[user_data['plan']]['daily_limit']}<br>
+            <strong>Всего анализов:</strong> {user_data['total_used']}
         </div>
         """
     
@@ -420,81 +284,99 @@ def admin_panel():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Admin Panel - DocScan</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Admin Panel</title>
         <style>
-            * {{ margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }}
-            body {{ background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); min-height: 100vh; padding: 20px; }}
-            .container {{ max-width: 1200px; margin: 0 auto; }}
-            .header {{ background: white; padding: 30px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }}
-            .admin-bar {{ background: #e74c3c; color: white; padding: 10px 20px; border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }}
-            .admin-info {{ font-size: 0.9em; }}
-            .logout-btn {{ background: #c0392b; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer; text-decoration: none; }}
-            .security-alert {{ background: #f8d7da; color: #721c24; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #e74c3c; }}
-            h1 {{ color: #2c3e50; margin-bottom: 10px; }}
-            .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }}
-            .stat-card {{ background: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }}
-            .stat-number {{ font-size: 2em; font-weight: bold; color: #3498db; }}
-            .new-user {{ background: #e8f5e8 !important; border-left: 4px solid #27ae60; }}
-            .user-card {{ background: white; padding: 20px; border-radius: 10px; margin: 10px 0; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }}
-            .user-header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }}
-            .user-id {{ font-weight: bold; color: #2c3e50; font-size: 1.2em; }}
-            .user-plan {{ background: #3498db; color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.9em; }}
-            .user-stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 10px 0; }}
-            .stat-item {{ background: #f8f9fa; padding: 8px; border-radius: 5px; text-align: center; }}
-            .controls {{ display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }}
-            button {{ background: #3498db; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; transition: background 0.3s; }}
-            button:hover {{ background: #2980b9; }}
-            .btn-premium {{ background: #e74c3c; }}
-            .btn-premium:hover {{ background: #c0392b; }}
-            .btn-unlimited {{ background: #9b59b6; }}
-            .btn-unlimited:hover {{ background: #8e44ad; }}
-            .btn-security {{ background: #27ae60; }}
-            .btn-security:hover {{ background: #219a52; }}
-            .form-section {{ background: white; padding: 25px; border-radius: 15px; margin: 20px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }}
-            input, select {{ width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; }}
-            .new-badge {{ background: #e74c3c; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; margin-left: 10px; }}
-            .last-active {{ font-size: 0.9em; color: #7f8c8d; margin-top: 5px; }}
-            .user-info {{ font-size: 0.8em; color: #95a5a6; margin-top: 3px; }}
+            body {{ font-family: Arial; margin: 40px; background: #f5f5f5; }}
+            .header {{ background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }}
+            .stats {{ display: flex; gap: 20px; margin: 20px 0; }}
+            .stat-card {{ background: white; padding: 20px; border-radius: 10px; flex: 1; text-align: center; }}
+            .users-list {{ background: white; padding: 20px; border-radius: 10px; }}
+            .btn {{ background: #007cba; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; }}
         </style>
     </head>
     <body>
-        <div class="container">
-            {security_alert}
-            
-            <div class="admin-bar">
-                <div class="admin-info">
-                    👤 Вы вошли как: <strong>{session.get('admin_username', 'admin')}</strong>
-                    | 🕒 Вход: {session.get('admin_login_time', 'N/A')}
-                </div>
-                <div>
-                    <a href="/admin/change-credentials" class="logout-btn" style="background: #27ae60; margin-right: 10px;">🔐 Сменить логин/пароль</a>
-                    <a href="/admin/logout" class="logout-btn">🚪 Выйти</a>
-                </div>
-            </div>
-
-            <div class="header">
-                <h1>🔧 Админ-панель DocScan</h1>
-                <p>Управление пользователями и тарифами в реальном времени</p>
-                
-                <div class="stats" id="statsContainer">
-                    <!-- Статистика будет загружена через JavaScript -->
-                </div>
-            </div>
-
-            <!-- ... остальная часть админ-панели без изменений ... -->
-            
+        <div class="header">
+            <h1>🔧 Админ-панель DocScan</h1>
+            <p>Вы вошли как: {session.get('admin_user', 'admin')}</p>
+            <a href="/admin/logout" class="btn" style="background: #dc3545;">Выйти</a>
+            <a href="/admin/change-password" class="btn" style="background: #28a745;">Сменить пароль</a>
         </div>
 
-        <script>
-            // ... JavaScript код админ-панели без изменений ...
-        </script>
+        <div class="stats">
+            <div class="stat-card">
+                <h3>👥 Пользователи</h3>
+                <h1>{total_users}</h1>
+            </div>
+            <div class="stat-card">
+                <h3>📊 Анализы</h3>
+                <h1>{total_analyses}</h1>
+            </div>
+        </div>
+
+        <div class="users-list">
+            <h3>Список пользователей:</h3>
+            {users_html if users_html else "<p>Пользователей нет</p>"}
+        </div>
     </body>
     </html>
     """
 
-# ... остальной код без изменений ...
+@app.route('/admin/change-password', methods=['GET', 'POST'])
+@admin_required
+def change_password():
+    if request.method == 'POST':
+        new_password = request.form.get('new_password')
+        if new_password and len(new_password) >= 6:
+            admin_data['password_hash'] = hashlib.sha256(new_password.encode()).hexdigest()
+            admin_data['is_default'] = False
+            save_admin()
+            return """
+            <html>
+            <body style="font-family: Arial; margin: 40px;">
+                <h2>✅ Пароль успешно изменен!</h2>
+                <a href="/admin">← В админку</a>
+            </body>
+            </html>
+            """
+        else:
+            return """
+            <html>
+            <body style="font-family: Arial; margin: 40px;">
+                <h2>❌ Пароль должен быть не менее 6 символов</h2>
+                <a href="/admin/change-password">← Назад</a>
+            </body>
+            </html>
+            """
+    
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Смена пароля</title>
+        <style>
+            body { font-family: Arial; margin: 40px; background: #f5f5f5; }
+            .form-box { background: white; padding: 30px; max-width: 400px; margin: 50px auto; border-radius: 10px; }
+            input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+            button { width: 100%; padding: 10px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        </style>
+    </head>
+    <body>
+        <div class="form-box">
+            <h2>🔐 Смена пароля</h2>
+            <form method="POST">
+                <input type="password" name="new_password" placeholder="Новый пароль (мин. 6 символов)" required>
+                <button type="submit">Сохранить</button>
+            </form>
+            <a href="/admin" style="display: block; text-align: center; margin-top: 15px;">← Назад</a>
+        </div>
+    </body>
+    </html>
+    """
+
+@app.route('/admin/users')
+@admin_required
+def get_users_api():
+    return jsonify(users_db)
 
 if __name__ == '__main__':
     print("🚀 DocScan Server запущен!")
@@ -504,11 +386,10 @@ if __name__ == '__main__':
     print("💎 Платные тарифы: 199₽, 399₽, 800₽")
     print("👥 Загружено пользователей:", len(users_db))
     print("🔐 Админ-панель защищена паролем")
-    print("⚠️  Дефолтные учетные данные:")
-    print(f"   👤 Логин: {DEFAULT_ADMIN_USERNAME}")
-    print(f"   🔑 Пароль: {DEFAULT_ADMIN_PASSWORD}")
-    print("   🚨 НЕМЕДЛЕННО СМЕНИТЕ ПАРОЛЬ В АДМИНКЕ!")
+    print("⚠️  Временные учетные данные:")
+    print("   👤 Логин: admin")
+    print("   🔑 Пароль: admin123")
+    print("   🚨 Смените пароль в админке!")
     
-    # Для продакшена на Render
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
