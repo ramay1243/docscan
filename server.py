@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import PyPDF2
 import docx
@@ -8,14 +8,13 @@ import os
 import uuid
 from datetime import datetime, date
 
-
 app = Flask(__name__)
+# Исправляем CORS для работы на Render
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-import os
+# Загружаем переменные окружения
 from dotenv import load_dotenv
-
-load_dotenv()  # Загружаем переменные из .env
+load_dotenv()
 
 # Данные Yandex Cloud из переменных окружения
 YANDEX_API_KEY = os.getenv('YANDEX_API_KEY')
@@ -267,10 +266,175 @@ def analyze_text(text, user_id='default'):
         'recommendations': ['💎 Перейдите на премиум для AI-анализа'],
         'ai_used': False
     }
-@app.route('/')
-def serve_index():
-    return send_file('index.html')
+
 # API endpoints
+@app.route('/')
+def home():
+    """Главная страница с интерфейсом"""
+    return """
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>DocScan - Анализ документов за 60 секунд</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+            body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; display: flex; justify-content: center; align-items: center; }
+            .container { background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); max-width: 800px; width: 100%; }
+            .header { text-align: center; margin-bottom: 40px; }
+            .logo { font-size: 3em; margin-bottom: 10px; }
+            h1 { color: #2d3748; margin-bottom: 10px; font-size: 2.2em; }
+            .subtitle { color: #718096; font-size: 1.2em; }
+            .upload-zone { border: 3px dashed #cbd5e0; border-radius: 15px; padding: 60px 30px; text-align: center; margin: 30px 0; transition: all 0.3s ease; background: #f7fafc; cursor: pointer; }
+            .upload-zone:hover { border-color: #667eea; background: #edf2f7; }
+            .upload-icon { font-size: 4em; color: #667eea; margin-bottom: 20px; }
+            .btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 15px 40px; border-radius: 50px; font-size: 1.1em; cursor: pointer; transition: transform 0.2s ease; margin: 10px; }
+            .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102,126,234,0.3); }
+            .btn:disabled { background: #a0aec0; cursor: not-allowed; transform: none; box-shadow: none; }
+            .file-info { background: #edf2f7; padding: 15px; border-radius: 10px; margin: 20px 0; }
+            .loading { display: none; text-align: center; margin: 20px 0; }
+            .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            .result { background: #f8fafc; border-radius: 15px; padding: 30px; margin-top: 30px; display: none; }
+            .risk-item { background: white; padding: 15px; margin: 10px 0; border-radius: 10px; border-left: 4px solid #e53e3e; }
+            .success-item { background: white; padding: 15px; margin: 10px 0; border-radius: 10px; border-left: 4px solid #48bb78; }
+            .summary { background: #e6fffa; padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 4px solid #38a169; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="logo">🔍</div>
+                <h1>DocScan</h1>
+                <p class="subtitle">Понять суть документа за 60 секунд</p>
+            </div>
+
+            <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                <div class="upload-icon">📄</div>
+                <p><strong>Нажмите чтобы выбрать документ</strong></p>
+                <p style="color: #718096; margin-top: 15px;">PDF, DOCX, TXT (до 10MB)</p>
+            </div>
+
+            <input type="file" id="fileInput" style="display: none;" accept=".pdf,.docx,.txt" onchange="handleFileSelect(this.files[0])">
+            
+            <div class="file-info" id="fileInfo" style="display: none;">
+                <strong>Выбран файл:</strong> <span id="fileName"></span>
+            </div>
+
+            <button class="btn" id="analyzeBtn" onclick="analyzeDocument()" disabled>Начать анализ</button>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Анализируем документ...</p>
+            </div>
+
+            <div class="result" id="result">
+                <h3>✅ Анализ завершен</h3>
+                <div id="resultContent"></div>
+            </div>
+        </div>
+
+        <script>
+            let selectedFile = null;
+
+            function handleFileSelect(file) {
+                if (!file) return;
+                
+                // Проверка типа файла
+                if (!file.name.match(/\\.(pdf|docx|txt)$/)) {
+                    alert('Пожалуйста, выберите файл в формате PDF, DOCX или TXT');
+                    return;
+                }
+
+                // Проверка размера
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('Файл слишком большой. Максимальный размер: 10MB');
+                    return;
+                }
+
+                selectedFile = file;
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileInfo').style.display = 'block';
+                document.getElementById('analyzeBtn').disabled = false;
+            }
+
+            async function analyzeDocument() {
+                if (!selectedFile) return;
+
+                // Показываем загрузку
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('analyzeBtn').disabled = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file', selectedFile);
+
+                    // Исправленный URL - используем текущий домен
+                    const response = await fetch(window.location.origin + '/analyze', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    // Проверяем статус ответа
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    document.getElementById('loading').style.display = 'none';
+
+                    if (data.success) {
+                        showResult(data);
+                    } else {
+                        alert('Ошибка: ' + data.error);
+                        document.getElementById('analyzeBtn').disabled = false;
+                    }
+
+                } catch (error) {
+                    document.getElementById('loading').style.display = 'none';
+                    alert('Ошибка соединения: ' + error.message);
+                    document.getElementById('analyzeBtn').disabled = false;
+                }
+            }
+
+            function showResult(data) {
+                const resultDiv = document.getElementById('result');
+                const resultContent = document.getElementById('resultContent');
+                
+                let risksHTML = '';
+                data.result.risks.forEach(risk => {
+                    risksHTML += `<div class="risk-item">${risk}</div>`;
+                });
+                
+                let recommendationsHTML = '';
+                data.result.recommendations.forEach(rec => {
+                    recommendationsHTML += `<div class="success-item">${rec}</div>`;
+                });
+                
+                resultContent.innerHTML = `
+                    <div style="margin-bottom: 20px;">
+                        <strong>📄 Анализ документа:</strong> ${data.filename}
+                    </div>
+                    
+                    <div class="summary">
+                        ${data.result.summary}
+                    </div>
+                    
+                    ${risksHTML ? `<h4 style="margin: 20px 0 10px 0; color: #e53e3e;">⚠️ Выявленные риски:</h4>${risksHTML}` : ''}
+                    
+                    ${recommendationsHTML ? `<h4 style="margin: 20px 0 10px 0; color: #48bb78;">✅ Рекомендации:</h4>${recommendationsHTML}` : ''}
+                `;
+                
+                resultDiv.style.display = 'block';
+                resultDiv.scrollIntoView({ behavior: 'smooth' });
+            }
+        </script>
+    </body>
+    </html>
+    """
+
 @app.route('/analyze', methods=['POST'])
 def analyze_document():
     user_id = 'default'
@@ -367,8 +531,8 @@ def get_plans():
     """Получить информацию о тарифах"""
     return jsonify(PLANS)
 
-@app.route('/')
-def home():
+@app.route('/api')
+def api_info():
     return jsonify({
         'message': 'DocScan API работает!',
         'status': 'active',
@@ -385,6 +549,3 @@ if __name__ == '__main__':
     # Для продакшена на Render
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
-
-
-
