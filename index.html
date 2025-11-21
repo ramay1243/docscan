@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocScan - Анализ документов за 60 секунд</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 1.2em;
+        }
+
+        .upload-zone {
+            border: 3px dashed #cbd5e0;
+            border-radius: 15px;
+            padding: 60px 30px;
+            text-align: center;
+            margin: 30px 0;
+            transition: all 0.3s ease;
+            background: #f7fafc;
+            cursor: pointer;
+        }
+
+        .upload-zone:hover {
+            border-color: #667eea;
+            background: #edf2f7;
+        }
+
+        .upload-zone.dragover {
+            border-color: #667eea;
+            background: #e6fffa;
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.3em;
+            color: #4a5568;
+            margin-bottom: 15px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: #e53e3e;
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 10px 20px rgba(229, 62, 62, 0.3);
+        }
+
+        .options {
+            margin: 30px 0;
+        }
+
+        .option-label {
+            display: block;
+            margin-bottom: 15px;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1em;
+            background: white;
+        }
+
+        .file-info {
+            background: #edf2f7;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .usage-info {
+            background: #fff5f5;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #e53e3e;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result {
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 30px;
+            display: none;
+        }
+
+        .result-title {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .risk-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border-left: 4px solid #e53e3e;
+        }
+
+        .warning-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border-left: 4px solid #f6ad55;
+        }
+
+        .success-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border-left: 4px solid #48bb78;
+        }
+
+        .summary {
+            background: #e6fffa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #38a169;
+        }
+
+        .plans {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .plan-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #e2e8f0;
+            text-align: center;
+        }
+
+        .plan-card.featured {
+            border-color: #667eea;
+            background: #f7fafc;
+        }
+
+        .plan-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .plan-price {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .plan-features {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+
+        .plan-features li {
+            padding: 5px 0;
+            color: #4a5568;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🔍</div>
+            <h1>DocScan</h1>
+            <p class="subtitle">Понять суть документа за 60 секунд</p>
+        </div>
+
+        <div class="upload-zone" id="dropZone">
+            <div class="upload-icon">📄</div>
+            <p class="upload-text"><strong>Перетащите сюда документ</strong></p>
+            <p>или</p>
+            <input type="file" id="fileInput" class="file-input" accept=".pdf,.docx,.txt">
+            <button class="btn" onclick="document.getElementById('fileInput').click()">
+                Выберите файл
+            </button>
+            <p style="color: #718096; margin-top: 15px;">PDF, DOCX, TXT (до 10MB)</p>
+        </div>
+
+        <div class="file-info" id="fileInfo">
+            <strong>Выбран файл:</strong> <span id="fileName"></span>
+        </div>
+
+        <div class="usage-info" id="usageInfo" style="display: none;">
+            <strong>Использование:</strong> <span id="usageText"></span>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Анализируем документ...</p>
+        </div>
+
+        <button class="btn" id="analyzeBtn" onclick="analyzeDocument()" disabled>
+            Начать анализ
+        </button>
+
+        <div class="result" id="result">
+            <h3 class="result-title">✅ Анализ завершен</h3>
+            <div id="resultContent">
+                <!-- Результаты появятся здесь -->
+            </div>
+        </div>
+
+        <div class="plans" id="plansSection">
+            <div class="plan-card">
+                <div class="plan-name">Бесплатный</div>
+                <div class="plan-price">0₽</div>
+                <ul class="plan-features">
+                    <li>✅ 3 анализа в день</li>
+                    <li>✅ AI-анализ YandexGPT</li>
+                    <li>✅ Все форматы файлов</li>
+                </ul>
+                <button class="btn" disabled>Текущий тариф</button>
+            </div>
+            
+            <div class="plan-card featured">
+                <div class="plan-name">Премиум</div>
+                <div class="plan-price">490₽/мес</div>
+                <ul class="plan-features">
+                    <li>🚀 50 анализов в день</li>
+                    <li>🚀 Приоритетный AI-анализ</li>
+                    <li>🚀 Расширенные отчеты</li>
+                    <li>🚀 Поддержка 24/7</li>
+                </ul>
+                <button class="btn" onclick="showUpgradeMessage()">Перейти</button>
+            </div>
+            
+            <div class="plan-card">
+                <div class="plan-name">Бизнес</div>
+                <div class="plan-price">1900₽/мес</div>
+                <ul class="plan-features">
+                    <li>💼 1000 анализов в день</li>
+                    <li>💼 API доступ</li>
+                    <li>💼 White-label решение</li>
+                    <li>💼 Персональный менеджер</li>
+                </ul>
+                <button class="btn" onclick="showUpgradeMessage()">Перейти</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Переменные
+        let selectedFile = null;
+
+        // Элементы
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const usageInfo = document.getElementById('usageInfo');
+        const usageText = document.getElementById('usageText');
+        const plansSection = document.getElementById('plansSection');
+
+        // Загружаем информацию об использовании
+        loadUsageInfo();
+
+        // Обработчик выбора файла
+        fileInput.addEventListener('change', function(e) {
+            handleFileSelection(e.target.files[0]);
+        });
+
+        // Drag and drop
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', function() {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFileSelection(e.dataTransfer.files[0]);
+        });
+
+        // Обработка выбранного файла
+        function handleFileSelection(file) {
+            if (!file) return;
+
+            // Проверка типа файла
+            const validTypes = ['application/pdf', 
+                              'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+                              'text/plain'];
+            
+            if (!validTypes.includes(file.type) && !file.name.match(/\.(pdf|docx|txt)$/)) {
+                alert('Пожалуйста, выберите файл в формате PDF, DOCX или TXT');
+                return;
+            }
+
+            // Проверка размера
+            if (file.size > 10 * 1024 * 1024) {
+                alert('Файл слишком большой. Максимальный размер: 10MB');
+                return;
+            }
+
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileInfo.style.display = 'block';
+            analyzeBtn.disabled = false;
+        }
+
+        // Функция анализа документа
+        async function analyzeDocument() {
+            if (!selectedFile) return;
+
+            // Показываем загрузку
+            document.getElementById('loading').style.display = 'block';
+            analyzeBtn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+
+                const response = await fetch('http://localhost:5000/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                document.getElementById('loading').style.display = 'none';
+
+                if (data.success) {
+                    showResult(data);
+                    loadUsageInfo(); // Обновляем информацию об использовании
+                } else {
+                    alert('Ошибка: ' + data.error);
+                    analyzeBtn.disabled = false;
+                    if (data.upgrade_required) {
+                        plansSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }
+
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                alert('Ошибка соединения с сервером. Запущен ли server.py?');
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        // Функция показа результатов
+        function showResult(data) {
+            const resultDiv = document.getElementById('result');
+            const resultContent = document.getElementById('resultContent');
+            
+            let risksHTML = '';
+            data.result.risks.forEach(risk => {
+                risksHTML += `<div class="risk-item">${risk}</div>`;
+            });
+            
+            let warningsHTML = '';
+            data.result.warnings.forEach(warning => {
+                warningsHTML += `<div class="warning-item">${warning}</div>`;
+            });
+            
+            let recommendationsHTML = '';
+            data.result.recommendations.forEach(rec => {
+                recommendationsHTML += `<div class="success-item">${rec}</div>`;
+            });
+            
+            // Информация об использовании
+            let usageHTML = '';
+            if (data.result.usage_info) {
+                usageHTML = `
+                    <div style="background: #ebf8ff; padding: 15px; border-radius: 10px; margin: 15px 0; border-left: 4px solid #4299e1;">
+                        <strong>Использовано анализов:</strong> ${data.result.usage_info.used_today}/${data.result.usage_info.daily_limit} 
+                        | <strong>Тариф:</strong> ${data.result.usage_info.plan_name}
+                    </div>
+                `;
+            }
+            
+            resultContent.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <strong>📄 Анализ документа:</strong> ${data.filename}
+                </div>
+                
+                <div class="summary">
+                    ${data.result.summary}
+                </div>
+                
+                ${usageHTML}
+                
+                ${risksHTML.length > 0 ? `<h4 style="margin: 20px 0 10px 0; color: #e53e3e;">⚠️ Выявленные риски:</h4>${risksHTML}` : ''}
+                
+                ${warningsHTML.length > 0 ? `<h4 style="margin: 20px 0 10px 0; color: #f6ad55;">📝 Замечания:</h4>${warningsHTML}` : ''}
+                
+                ${recommendationsHTML.length > 0 ? `<h4 style="margin: 20px 0 10px 0; color: #48bb78;">✅ Рекомендации:</h4>${recommendationsHTML}` : ''}
+            `;
+            
+            resultDiv.style.display = 'block';
+            resultDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Загрузка информации об использовании
+        async function loadUsageInfo() {
+            try {
+                const response = await fetch('http://localhost:5000/usage');
+                const data = await response.json();
+                
+                usageText.textContent = `${data.used_today}/${data.daily_limit} анализов сегодня (${data.plan_name})`;
+                usageInfo.style.display = 'block';
+                
+            } catch (error) {
+                console.log('Не удалось загрузить информацию об использовании');
+            }
+        }
+
+        // Сообщение об апгрейде
+        function showUpgradeMessage() {
+            alert('Функция перехода на платный тариф будет доступна после запуска на хостинге!');
+        }
+
+        // Показываем тарифы при загрузке
+        setTimeout(() => {
+            plansSection.style.display = 'grid';
+        }, 1000);
+    </script>
+</body>
+</html>
