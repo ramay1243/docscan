@@ -578,6 +578,187 @@ def api_info():
         'ai_available': True,
         'pdf_export': False
     })
+# Админ-панель для выдачи тарифов
+@app.route('/admin')
+def admin_panel():
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Admin Panel - DocScan</title>
+        <style>
+            body { font-family: Arial; margin: 40px; }
+            .container { max-width: 600px; }
+            .user-card { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 8px; }
+            button { background: #667eea; color: white; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🔧 Админ-панель DocScan</h1>
+            
+            <h3>Текущие пользователи:</h3>
+            <div id="usersList"></div>
+            
+            <h3>Выдать тариф пользователю:</h3>
+            <input type="text" id="userId" placeholder="ID пользователя (default)" value="default">
+            <select id="planSelect">
+                <option value="free">Бесплатный (1 анализ)</option>
+                <option value="basic">Базовый (10 анализов) - 199₽</option>
+                <option value="premium">Премиум (50 анализов) - 399₽</option>
+                <option value="unlimited">Безлимитный - 800₽</option>
+            </select>
+            <button onclick="setUserPlan()">Выдать тариф</button>
+            
+            <h3>Создать нового пользователя:</h3>
+            <input type="text" id="newUserId" placeholder="Новый ID пользователя">
+            <button onclick="createUser()">Создать пользователя</button>
+        </div>
+
+        <script>
+            // Загружаем пользователей
+            function loadUsers() {
+                fetch('/admin/users')
+                    .then(r => r.json())
+                    .then(users => {
+                        let html = '';
+                        for (const [userId, userData] of Object.entries(users)) {
+                            html += `
+                                <div class="user-card">
+                                    <strong>ID:</strong> ${userId}<br>
+                                    <strong>Тариф:</strong> ${userData.plan} (${getPlanName(userData.plan)})<br>
+                                    <strong>Использовано сегодня:</strong> ${userData.used_today}/${getPlanLimit(userData.plan)}<br>
+                                    <button onclick="setUserPlanQuick('${userId}', 'basic')">Выдать Базовый</button>
+                                    <button onclick="setUserPlanQuick('${userId}', 'premium')">Выдать Премиум</button>
+                                    <button onclick="setUserPlanQuick('${userId}', 'unlimited')">Выдать Безлимитный</button>
+                                </div>
+                            `;
+                        }
+                        document.getElementById('usersList').innerHTML = html;
+                    });
+            }
+
+            function getPlanName(plan) {
+                const names = {free: 'Бесплатный', basic: 'Базовый', premium: 'Премиум', unlimited: 'Безлимитный'};
+                return names[plan] || plan;
+            }
+
+            function getPlanLimit(plan) {
+                const limits = {free: 1, basic: 10, premium: 50, unlimited: 1000};
+                return limits[plan] || 0;
+            }
+
+            function setUserPlan() {
+                const userId = document.getElementById('userId').value || 'default';
+                const plan = document.getElementById('planSelect').value;
+                
+                fetch('/admin/set-plan', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: userId, plan: plan})
+                })
+                .then(r => r.json())
+                .then(result => {
+                    alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
+                    loadUsers();
+                });
+            }
+
+            function setUserPlanQuick(userId, plan) {
+                fetch('/admin/set-plan', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: userId, plan: plan})
+                })
+                .then(r => r.json())
+                .then(result => {
+                    alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
+                    loadUsers();
+                });
+            }
+
+            function createUser() {
+                const userId = document.getElementById('newUserId').value;
+                if (!userId) return alert('Введите ID пользователя');
+                
+                fetch('/admin/create-user', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: userId})
+                })
+                .then(r => r.json())
+                .then(result => {
+                    alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
+                    loadUsers();
+                });
+            }
+
+            // Загружаем пользователей при открытии
+            loadUsers();
+        </script>
+    </body>
+    </html>
+    """
+
+@app.route('/admin/users', methods=['GET'])
+def get_all_users():
+    """Получить всех пользователей"""
+    return jsonify(users_db)
+
+@app.route('/admin/set-plan', methods=['POST'])
+def admin_set_plan():
+    """Установить тариф пользователю"""
+    try:
+        data = request.json
+        user_id = data.get('user_id', 'default')
+        plan = data.get('plan')
+        
+        if user_id not in users_db:
+            return jsonify({'success': False, 'error': 'Пользователь не найден'})
+        
+        if plan not in PLANS:
+            return jsonify({'success': False, 'error': 'Неверный тариф'})
+        
+        # Обновляем тариф
+        users_db[user_id]['plan'] = plan
+        users_db[user_id]['used_today'] = 0
+        
+        return jsonify({
+            'success': True,
+            'message': f'Пользователю {user_id} выдан тариф: {PLANS[plan]["name"]}'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/admin/create-user', methods=['POST'])
+def admin_create_user():
+    """Создать нового пользователя"""
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            return jsonify({'success': False, 'error': 'Укажите ID пользователя'})
+        
+        if user_id in users_db:
+            return jsonify({'success': False, 'error': 'Пользователь уже существует'})
+        
+        # Создаем пользователя
+        users_db[user_id] = {
+            'plan': 'free',
+            'used_today': 0,
+            'last_reset': date.today().isoformat(),
+            'total_used': 0
+        }
+        
+        return jsonify({
+            'success': True,
+            'message': f'Пользователь {user_id} создан с бесплатным тарифом'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 if __name__ == '__main__':
     print("🚀 DocScan Server запущен!")
@@ -589,5 +770,6 @@ if __name__ == '__main__':
     # Для продакшена на Render
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
