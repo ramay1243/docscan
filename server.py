@@ -1464,22 +1464,23 @@ def payment_success():
     </body>
     </html>
     """
-    except:
-            pass
-    
-    return """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Платеж успешен - DocScan</title>
-        <style>
-            body { font-family: Arial; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-            .container { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; }
-            .success-icon { font-size: 4em; color: #48bb78; margin-bottom: 20px; }
-            .btn { background: #48bb78; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 20px; }
-        </style>
-    </head>
-    <body>
+except:
+    pass
+
+return """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Платеж успешен - DocScan</title>
+    <style>
+        body { font-family: Arial; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .container { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; }
+        .success-icon { font-size: 4em; color: #48bb78; margin-bottom: 20px; }
+        .btn { background: #48bb78; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 20px; }
+        .instructions { background: #f0fff4; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left; }
+    </style>
+</head>
+<body>
         <div class="container">
             <div class="success-icon">✅</div>
             <h1>Платеж успешно завершен!</h1>
