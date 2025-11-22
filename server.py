@@ -1,4 +1,7 @@
-from flask import Flask, request, jsonify
+Ты абсолютно прав! Я дал только измененные части. Вот ПОЛНЫЙ код с началом и концом:
+
+```python
+from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 import PyPDF2
 import docx
@@ -7,8 +10,12 @@ import tempfile
 import os
 import uuid
 from datetime import datetime, date
+import secrets
 
 app = Flask(__name__)
+# Добавляем секретный ключ для сессий
+app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
+
 # Исправляем CORS для работы на Render
 CORS(app, resources={r"/*": {"origins": "*"}})
 
@@ -26,9 +33,19 @@ users_db = {
         'plan': 'free',
         'used_today': 0,
         'last_reset': date.today().isoformat(),
-        'total_used': 0
+        'total_used': 0,
+        'user_id': 'default'  # Добавляем явное поле ID
     }
 }
+
+# Добавляем администраторов
+ADMINS = {
+    'admin': 'admin123',  # login: password
+    'superuser': 'super123'
+}
+
+# Глобальная переменная для хранения сессий
+admin_sessions = {}
 
 # ОБНОВЛЕННЫЕ ТАРИФЫ - 1 бесплатный, потом платные
 PLANS = {
@@ -58,14 +75,24 @@ PLANS = {
     }
 }
 
-def get_user(user_id='default'):
+def generate_user_id():
+    """Генерирует уникальный ID пользователя"""
+    return str(uuid.uuid4())[:8]
+
+def get_user(user_id=None):
     """Получает или создает пользователя"""
+    if not user_id:
+        # Создаем нового пользователя если ID не передан
+        user_id = generate_user_id()
+    
     if user_id not in users_db:
         users_db[user_id] = {
+            'user_id': user_id,  # Сохраняем ID
             'plan': 'free',
             'used_today': 0,
             'last_reset': date.today().isoformat(),
-            'total_used': 0
+            'total_used': 0,
+            'created_at': datetime.now().isoformat()
         }
     
     user = users_db[user_id]
@@ -279,7 +306,7 @@ def analyze_text(text, user_id='default'):
 def home():
     """Главная страница с интерфейсом"""
     return """
-        <!DOCTYPE html>
+    <!DOCTYPE html>
     <html lang="ru">
     <head>
         <meta charset="UTF-8">
@@ -293,6 +320,7 @@ def home():
             .logo { font-size: 3em; margin-bottom: 10px; }
             h1 { color: #2d3748; margin-bottom: 10px; font-size: 2.2em; }
             .subtitle { color: #718096; font-size: 1.2em; }
+            .user-info { background: #edf2f7; padding: 15px; border-radius: 10px; margin: 20px 0; text-align: center; }
             .upload-zone { border: 3px dashed #cbd5e0; border-radius: 15px; padding: 60px 30px; text-align: center; margin: 30px 0; transition: all 0.3s ease; background: #f7fafc; cursor: pointer; }
             .upload-zone:hover { border-color: #667eea; background: #edf2f7; }
             .upload-icon { font-size: 4em; color: #667eea; margin-bottom: 20px; }
@@ -315,6 +343,13 @@ def home():
                 <div class="logo">🔍</div>
                 <h1>DocScan</h1>
                 <p class="subtitle">Понять суть документа за 60 секунд</p>
+            </div>
+
+            <div class="user-info" id="userInfo">
+                <strong>👤 Ваш ID:</strong> <span id="userId">Загрузка...</span><br>
+                <strong>📊 Анализов сегодня:</strong> <span id="usageInfo">0/1</span><br>
+                <button class="btn" onclick="copyUserId()" style="background: #48bb78; padding: 8px 15px; font-size: 0.9em;">📋 Скопировать ID</button>
+                <button class="btn" onclick="generateNewId()" style="background: #ed8936; padding: 8px 15px; font-size: 0.9em;">🆕 Новый ID</button>
             </div>
 
             <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
@@ -374,6 +409,61 @@ def home():
 
         <script>
             let selectedFile = null;
+            let currentUserId = null;
+
+            // Загружаем или создаем ID пользователя
+            function loadUser() {
+                let savedId = localStorage.getItem('docscan_user_id');
+                if (!savedId) {
+                    // Создаем нового пользователя
+                    fetch('/create-user', { method: 'POST' })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                currentUserId = data.user_id;
+                                localStorage.setItem('docscan_user_id', currentUserId);
+                                updateUserInfo();
+                            }
+                        });
+                } else {
+                    currentUserId = savedId;
+                    updateUserInfo();
+                }
+            }
+
+            function updateUserInfo() {
+                if (!currentUserId) return;
+                
+                document.getElementById('userId').textContent = currentUserId;
+                
+                // Загружаем информацию об использовании
+                fetch(`/usage?user_id=${currentUserId}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        document.getElementById('usageInfo').textContent = 
+                            `${data.used_today}/${data.daily_limit}`;
+                    });
+            }
+
+            function copyUserId() {
+                navigator.clipboard.writeText(currentUserId);
+                alert('ID скопирован: ' + currentUserId);
+            }
+
+            function generateNewId() {
+                if (confirm('Создать новый ID? Текущая статистика будет сброшена.')) {
+                    fetch('/create-user', { method: 'POST' })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                currentUserId = data.user_id;
+                                localStorage.setItem('docscan_user_id', currentUserId);
+                                updateUserInfo();
+                                alert('Новый ID создан: ' + currentUserId);
+                            }
+                        });
+                }
+            }
 
             function handleFileSelect(event) {
                 const file = event.target.files[0];
@@ -396,7 +486,7 @@ def home():
             }
 
             async function analyzeDocument() {
-                if (!selectedFile) return;
+                if (!selectedFile || !currentUserId) return;
 
                 document.getElementById('loading').style.display = 'block';
                 document.getElementById('analyzeBtn').disabled = true;
@@ -404,6 +494,7 @@ def home():
                 try {
                     const formData = new FormData();
                     formData.append('file', selectedFile);
+                    formData.append('user_id', currentUserId);
 
                     const response = await fetch(window.location.origin + '/analyze', {
                         method: 'POST',
@@ -420,6 +511,7 @@ def home():
 
                     if (data.success) {
                         showResult(data);
+                        updateUserInfo(); // Обновляем статистику
                     } else {
                         alert('Ошибка: ' + data.error);
                         document.getElementById('analyzeBtn').disabled = false;
@@ -469,14 +561,35 @@ def home():
                 resultDiv.style.display = 'block';
                 resultDiv.scrollIntoView({ behavior: 'smooth' });
             }
+
+            // Загружаем пользователя при старте
+            loadUser();
         </script>
     </body>
     </html>
     """
 
+# Добавляем endpoint для создания пользователя
+@app.route('/create-user', methods=['POST'])
+def create_user():
+    """Создает нового пользователя"""
+    try:
+        user_id = generate_user_id()
+        user = get_user(user_id)  # Это создаст пользователя
+        
+        return jsonify({
+            'success': True,
+            'user_id': user_id,
+            'message': 'Пользователь создан'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+# Обновляем endpoint анализа для работы с user_id
 @app.route('/analyze', methods=['POST'])
 def analyze_document():
-    user_id = 'default'
+    # Получаем user_id из формы или используем default
+    user_id = request.form.get('user_id', 'default')
     
     # Проверяем лимиты
     if not can_analyze(user_id):
@@ -484,7 +597,7 @@ def analyze_document():
         plan = PLANS[user['plan']]
         return jsonify({
             'success': False,
-            'error': f'❌ Бесплатный лимит исчерпан! Сегодня использовано 1/1 анализ.\\n\\n💎 Перейдите на платный тариф для продолжения использования:',
+            'error': f'❌ Бесплатный лимит исчерпан! Сегодня использовано {user["used_today"]}/{plan["daily_limit"]} анализов.',
             'upgrade_required': True
         }), 402
     
@@ -535,6 +648,7 @@ def analyze_document():
             return jsonify({
                 'success': True,
                 'filename': file.filename,
+                'user_id': user_id,
                 'result': analysis_result
             })
             
@@ -549,14 +663,16 @@ def analyze_document():
     except Exception as e:
         return jsonify({'error': f'Ошибка обработки: {str(e)}'}), 500
 
+# Обновляем endpoint использования
 @app.route('/usage', methods=['GET'])
 def get_usage():
     """Получить информацию об использовании"""
-    user_id = 'default'
+    user_id = request.args.get('user_id', 'default')
     user = get_user(user_id)
     plan = PLANS[user['plan']]
     
     return jsonify({
+        'user_id': user_id,
         'plan': user['plan'],
         'plan_name': plan['name'],
         'used_today': user['used_today'],
@@ -578,140 +694,293 @@ def api_info():
         'ai_available': True,
         'pdf_export': False
     })
-# Админ-панель для выдачи тарифов
-@app.route('/admin')
-def admin_panel():
+
+# 🔐 ЗАЩИЩЕННАЯ АДМИН-ПАНЕЛЬ
+
+@app.route('/admin-login', methods=['GET', 'POST'])
+def admin_login():
+    """Страница входа в админ-панель"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if username in ADMINS and ADMINS[username] == password:
+            # Создаем сессию
+            session_id = secrets.token_hex(16)
+            admin_sessions[session_id] = {
+                'username': username,
+                'login_time': datetime.now().isoformat()
+            }
+            response = jsonify({'success': True, 'session_id': session_id})
+            response.set_cookie('admin_session', session_id, httponly=True)
+            return response
+        else:
+            return jsonify({'success': False, 'error': 'Неверные учетные данные'})
+    
     return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Admin Login - DocScan</title>
+        <style>
+            body { font-family: Arial; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+            .login-box { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); width: 300px; }
+            h2 { text-align: center; margin-bottom: 30px; color: #2d3748; }
+            input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #cbd5e0; border-radius: 8px; box-sizing: border-box; }
+            button { width: 100%; background: #667eea; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 16px; }
+            button:hover { background: #5a67d8; }
+            .error { color: #e53e3e; text-align: center; margin-top: 10px; }
+        </style>
+    </head>
+    <body>
+        <div class="login-box">
+            <h2>🔧 Вход в админ-панель</h2>
+            <form id="loginForm">
+                <input type="text" name="username" placeholder="Логин" required>
+                <input type="password" name="password" placeholder="Пароль" required>
+                <button type="submit">Войти</button>
+            </form>
+            <div class="error" id="error"></div>
+        </div>
+        <script>
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                
+                const response = await fetch('/admin-login', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    window.location.href = '/admin';
+                } else {
+                    document.getElementById('error').textContent = result.error;
+                }
+            });
+        </script>
+    </body>
+    </html>
+    """
+
+def require_admin_auth(f):
+    """Декоратор для проверки авторизации администратора"""
+    def decorated_function(*args, **kwargs):
+        session_id = request.cookies.get('admin_session')
+        
+        if not session_id or session_id not in admin_sessions:
+            return jsonify({'error': 'Требуется авторизация'}), 401
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/admin')
+@require_admin_auth
+def admin_panel():
+    """Защищенная админ-панель"""
+    session_id = request.cookies.get('admin_session')
+    admin_info = admin_sessions.get(session_id, {})
+    
+    return f"""
     <!DOCTYPE html>
     <html>
     <head>
         <title>Admin Panel - DocScan</title>
         <style>
-            body { font-family: Arial; margin: 40px; }
-            .container { max-width: 600px; }
-            .user-card { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 8px; }
-            button { background: #667eea; color: white; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; }
+            body {{ font-family: Arial; margin: 40px; background: #f7fafc; }}
+            .container {{ max-width: 1200px; margin: 0 auto; }}
+            .header {{ background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+            .user-card {{ background: white; padding: 15px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
+            button {{ background: #667eea; color: white; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; }}
+            button:hover {{ background: #5a67d8; }}
+            .logout-btn {{ background: #e53e3e; }}
+            .logout-btn:hover {{ background: #c53030; }}
+            .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }}
+            .stat-card {{ background: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>🔧 Админ-панель DocScan</h1>
+            <div class="header">
+                <h1>🔧 Админ-панель DocScan</h1>
+                <p>Вошел как: <strong>{admin_info.get('username', 'Unknown')}</strong></p>
+                <button class="logout-btn" onclick="logout()">🚪 Выйти</button>
+            </div>
             
-            <h3>Текущие пользователи:</h3>
+            <div class="stats">
+                <div class="stat-card">
+                    <h3>👥 Всего пользователей</h3>
+                    <div id="totalUsers">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>📊 Всего анализов</h3>
+                    <div id="totalAnalyses">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>📈 Анализов сегодня</h3>
+                    <div id="todayAnalyses">0</div>
+                </div>
+            </div>
+            
+            <h3>Управление пользователями:</h3>
             <div id="usersList"></div>
             
             <h3>Выдать тариф пользователю:</h3>
-            <input type="text" id="userId" placeholder="ID пользователя (default)" value="default">
+            <input type="text" id="userId" placeholder="ID пользователя">
             <select id="planSelect">
                 <option value="free">Бесплатный (1 анализ)</option>
-                <option value="basic">Базовый (10 анализов) - 199₽</option>
-                <option value="premium">Премиум (50 анализов) - 399₽</option>
-                <option value="unlimited">Безлимитный - 800₽</option>
+                <option value="basic">Базовый (10 анализов)</option>
+                <option value="premium">Премиум (50 анализов)</option>
+                <option value="unlimited">Безлимитный</option>
             </select>
             <button onclick="setUserPlan()">Выдать тариф</button>
             
             <h3>Создать нового пользователя:</h3>
-            <input type="text" id="newUserId" placeholder="Новый ID пользователя">
+            <input type="text" id="newUserId" placeholder="Новый ID пользователя (опционально)">
             <button onclick="createUser()">Создать пользователя</button>
         </div>
 
         <script>
-            // Загружаем пользователей
-            function loadUsers() {
+            function logout() {{
+                document.cookie = "admin_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                window.location.href = "/admin-login";
+            }}
+
+            // Загружаем статистику и пользователей
+            function loadStats() {{
+                fetch('/admin/stats')
+                    .then(r => r.json())
+                    .then(stats => {{
+                        document.getElementById('totalUsers').textContent = stats.total_users;
+                        document.getElementById('totalAnalyses').textContent = stats.total_analyses;
+                        document.getElementById('todayAnalyses').textContent = stats.today_analyses;
+                    }});
+            }}
+
+            function loadUsers() {{
                 fetch('/admin/users')
                     .then(r => r.json())
-                    .then(users => {
+                    .then(users => {{
                         let html = '';
-                        for (const [userId, userData] of Object.entries(users)) {
+                        for (const [userId, userData] of Object.entries(users)) {{
                             html += `
                                 <div class="user-card">
                                     <strong>ID:</strong> ${userId}<br>
-                                    <strong>Тариф:</strong> ${userData.plan} (${getPlanName(userData.plan)})<br>
-                                    <strong>Использовано сегодня:</strong> ${userData.used_today}/${getPlanLimit(userData.plan)}<br>
-                                    <button onclick="setUserPlanQuick('${userId}', 'basic')">Выдать Базовый</button>
-                                    <button onclick="setUserPlanQuick('${userId}', 'premium')">Выдать Премиум</button>
-                                    <button onclick="setUserPlanQuick('${userId}', 'unlimited')">Выдать Безлимитный</button>
+                                    <strong>Тариф:</strong> ${{userData.plan}} (${{getPlanName(userData.plan)}})<br>
+                                    <strong>Использовано сегодня:</strong> ${{userData.used_today}}/${{getPlanLimit(userData.plan)}}<br>
+                                    <strong>Всего анализов:</strong> ${{userData.total_used}}<br>
+                                    <strong>Создан:</strong> ${{userData.created_at || 'Неизвестно'}}<br>
+                                    <button onclick="setUserPlanQuick('${{userId}}', 'basic')">Выдать Базовый</button>
+                                    <button onclick="setUserPlanQuick('${{userId}}', 'premium')">Выдать Премиум</button>
+                                    <button onclick="setUserPlanQuick('${{userId}}', 'unlimited')">Выдать Безлимитный</button>
                                 </div>
                             `;
-                        }
+                        }}
                         document.getElementById('usersList').innerHTML = html;
-                    });
-            }
+                    }});
+            }}
 
-            function getPlanName(plan) {
-                const names = {free: 'Бесплатный', basic: 'Базовый', premium: 'Премиум', unlimited: 'Безлимитный'};
+            function getPlanName(plan) {{
+                const names = {{free: 'Бесплатный', basic: 'Базовый', premium: 'Премиум', unlimited: 'Безлимитный'}};
                 return names[plan] || plan;
-            }
+            }}
 
-            function getPlanLimit(plan) {
-                const limits = {free: 1, basic: 10, premium: 50, unlimited: 1000};
+            function getPlanLimit(plan) {{
+                const limits = {{free: 1, basic: 10, premium: 50, unlimited: 1000}};
                 return limits[plan] || 0;
-            }
+            }}
 
-            function setUserPlan() {
-                const userId = document.getElementById('userId').value || 'default';
+            function setUserPlan() {{
+                const userId = document.getElementById('userId').value;
                 const plan = document.getElementById('planSelect').value;
                 
-                fetch('/admin/set-plan', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId, plan: plan})
-                })
-                .then(r => r.json())
-                .then(result => {
-                    alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
-                    loadUsers();
-                });
-            }
-
-            function setUserPlanQuick(userId, plan) {
-                fetch('/admin/set-plan', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId, plan: plan})
-                })
-                .then(r => r.json())
-                .then(result => {
-                    alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
-                    loadUsers();
-                });
-            }
-
-            function createUser() {
-                const userId = document.getElementById('newUserId').value;
                 if (!userId) return alert('Введите ID пользователя');
                 
-                fetch('/admin/create-user', {
+                fetch('/admin/set-plan', {{
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({user_id: userId})
-                })
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{user_id: userId, plan: plan}})
+                }})
                 .then(r => r.json())
-                .then(result => {
+                .then(result => {{
                     alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
                     loadUsers();
-                });
-            }
+                    loadStats();
+                }});
+            }}
 
-            // Загружаем пользователей при открытии
+            function setUserPlanQuick(userId, plan) {{
+                fetch('/admin/set-plan', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{user_id: userId, plan: plan}})
+                }})
+                .then(r => r.json())
+                .then(result => {{
+                    alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
+                    loadUsers();
+                    loadStats();
+                }});
+            }}
+
+            function createUser() {{
+                const userId = document.getElementById('newUserId').value;
+                
+                fetch('/admin/create-user', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{user_id: userId}})
+                }})
+                .then(r => r.json())
+                .then(result => {{
+                    alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
+                    loadUsers();
+                    loadStats();
+                }});
+            }}
+
+            // Загружаем при открытии
+            loadStats();
             loadUsers();
         </script>
     </body>
     </html>
     """
 
-@app.route('/admin/users', methods=['GET'])
+# Админ API endpoints
+@app.route('/admin/stats')
+@require_admin_auth
+def admin_stats():
+    """Статистика для админ-панели"""
+    total_users = len(users_db)
+    total_analyses = sum(user['total_used'] for user in users_db.values())
+    today_analyses = sum(user['used_today'] for user in users_db.values())
+    
+    return jsonify({
+        'total_users': total_users,
+        'total_analyses': total_analyses,
+        'today_analyses': today_analyses
+    })
+
+@app.route('/admin/users')
+@require_admin_auth
 def get_all_users():
     """Получить всех пользователей"""
     return jsonify(users_db)
 
 @app.route('/admin/set-plan', methods=['POST'])
+@require_admin_auth
 def admin_set_plan():
     """Установить тариф пользователю"""
     try:
         data = request.json
-        user_id = data.get('user_id', 'default')
+        user_id = data.get('user_id')
         plan = data.get('plan')
+        
+        if not user_id:
+            return jsonify({'success': False, 'error': 'Укажите ID пользователя'})
         
         if user_id not in users_db:
             return jsonify({'success': False, 'error': 'Пользователь не найден'})
@@ -721,7 +990,7 @@ def admin_set_plan():
         
         # Обновляем тариф
         users_db[user_id]['plan'] = plan
-        users_db[user_id]['used_today'] = 0
+        users_db[user_id]['used_today'] = 0  # Сбрасываем дневной лимит
         
         return jsonify({
             'success': True,
@@ -732,29 +1001,34 @@ def admin_set_plan():
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/admin/create-user', methods=['POST'])
+@require_admin_auth
 def admin_create_user():
     """Создать нового пользователя"""
     try:
         data = request.json
         user_id = data.get('user_id')
         
+        # Если ID не указан, генерируем случайный
         if not user_id:
-            return jsonify({'success': False, 'error': 'Укажите ID пользователя'})
+            user_id = generate_user_id()
         
         if user_id in users_db:
             return jsonify({'success': False, 'error': 'Пользователь уже существует'})
         
         # Создаем пользователя
         users_db[user_id] = {
+            'user_id': user_id,
             'plan': 'free',
             'used_today': 0,
             'last_reset': date.today().isoformat(),
-            'total_used': 0
+            'total_used': 0,
+            'created_at': datetime.now().isoformat()
         }
         
         return jsonify({
             'success': True,
-            'message': f'Пользователь {user_id} создан с бесплатным тарифом'
+            'message': f'Пользователь {user_id} создан с бесплатным тарифом',
+            'user_id': user_id
         })
         
     except Exception as e:
@@ -763,10 +1037,15 @@ def admin_create_user():
 if __name__ == '__main__':
     print("🚀 DocScan Server запущен!")
     print("🤖 YandexGPT: Активен")
-    print("📄 PDF отчеты: Отключены")
-    print("💰 Бесплатный лимит: 1 анализ в день")  # ОБНОВИЛОСЬ
-    print("💎 Платные тарифы: 199₽, 399₽, 800₽")  # ДОБАВИЛОСЬ
+    print("🔐 Админ-панель: Защищена паролем")
+    print("👤 Индивидуальные ID пользователей: Активны")
+    print("💰 Бесплатный лимит: 1 анализ в день")
     
     # Для продакшена на Render
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+```
+
+Теперь это ПОЛНЫЙ код с началом (импорты) и концом (if __name__ == '__main__').
+
+Просто скопируй ВЕСЬ этот код и замени им свой старый app.py на GitHub! 🚀
