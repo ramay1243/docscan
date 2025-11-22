@@ -562,6 +562,7 @@ def home():
             loadUser();
         </script>
 
+    
     <!-- ФУТЕР -->
     <div style="width: 100%; margin-top: 60px; padding: 30px 0; text-align: center; color: #718096; border-top: 1px solid #e2e8f0; background: white;">
         <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
@@ -578,9 +579,7 @@ def home():
     </div>
 
     </body>
-            </footer>
-    </body>
-    </html>
+</html>
     """
 
 # Добавляем endpoint для создания пользователя
