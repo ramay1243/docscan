@@ -564,9 +564,9 @@ def home():
 
     
     <!-- ФУТЕР -->
-    <div style="width: 100%; margin-top: 60px; padding: 30px 0; text-align: center; color: #718096; border-top: 1px solid #e2e8f0; background: white;">
+    <div style="width: 100%; text-align: center; padding: 30px 0; color: #718096; border-top: 1px solid #e2e8f0; margin-top: 50px; background: white;">
         <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
-            <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 15px;">
                 <a href="/terms" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Пользовательское соглашение</a>
                 <a href="/privacy" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Политика конфиденциальности</a>
                 <a href="/offer" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Публичная оферта</a>
