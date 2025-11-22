@@ -446,7 +446,7 @@ def home():
                             <li style="padding: 5px 0;">🚀 Приоритетный AI-анализ</li>
                             <li style="padding: 5px 0;">🚀 Быстрая обработка</li>
                         </ul>
-                        <button class="btn" onclick="alert('Тариф будет доступен после подключения платежей')" style="background: #38a169;">Выбрать</button>
+                        <button class="btn" onclick="buyPlan('basic')" style="background: #38a169;">Купить за 199₽</button>
                     </div>
                 </div>
             </div>
@@ -607,8 +607,46 @@ def home():
             }
 
             // Загружаем пользователя при старте
-            loadUser();
-        </script>
+        loadUser();
+
+        // 🔐 ФУНКЦИЯ ДЛЯ ПОКУПКИ ТАРИФОВ
+        async function buyPlan(planType) {
+            if (!currentUserId) {
+                alert('Сначала загрузите страницу');
+                return;
+            }
+            
+            const planNames = {
+                'basic': 'Базовый (199₽)'
+            };
+            
+            if (!confirm(`Вы уверены что хотите купить тариф "${planNames[planType]}"?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/create-payment', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        user_id: currentUserId,
+                        plan: planType
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    window.location.href = result.payment_url;
+                } else {
+                    alert('Ошибка: ' + result.error);
+                }
+                
+            } catch (error) {
+                alert('Ошибка соединения: ' + error.message);
+            }
+        }
+    </script>
 
         <!-- ФУТЕР -->
         <div style="width: 100%; text-align: center; padding: 30px 0; color: #718096; border-top: 1px solid #e2e8f0; margin-top: 50px; background: white;">
