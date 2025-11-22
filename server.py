@@ -583,10 +583,11 @@ def home():
 # Добавляем endpoint для создания пользователя
 @app.route('/create-user', methods=['POST'])
 def create_user():
-    """Создает нового пользователя"""
+    """Создает нового пользователя и добавляет в базу"""
     try:
         user_id = generate_user_id()
-        user = get_user(user_id)  # Это создаст пользователя
+        # ЭТА СТРОКА ДОБАВЛЯЕТ ПОЛЬЗОВАТЕЛЯ В БАЗУ
+        user = get_user(user_id)  # get_user автоматически создает пользователя если его нет
         
         return jsonify({
             'success': True,
