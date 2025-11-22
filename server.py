@@ -1048,15 +1048,77 @@ def admin_create_user():
 # Страницы для футера
 @app.route('/terms')
 def terms():
-    return "Страница пользовательского соглашения"
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Пользовательское соглашение - DocScan</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; background: #f7fafc; }
+            .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+            .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; font-weight: bold; }
+            h1 { color: #2d3748; margin-bottom: 30px; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+            h2 { color: #4a5568; margin-top: 30px; margin-bottom: 15px; }
+            p { margin-bottom: 15px; color: #4a5568; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <a href="/" class="back-link">← Назад на главную</a>
+            <h1>Пользовательское соглашение</h1>
+            <p>Полный текст пользовательского соглашения будет здесь...</p>
+        </div>
+    </body>
+    </html>
+    """
 
 @app.route('/privacy')
 def privacy():
-    return "Страница политики конфиденциальности"
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Политика конфиденциальности - DocScan</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; background: #f7fafc; }
+            .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+            .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; font-weight: bold; }
+            h1 { color: #2d3748; margin-bottom: 30px; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <a href="/" class="back-link">← Назад на главную</a>
+            <h1>Политика конфиденциальности</h1>
+            <p>Полный текст политики конфиденциальности будет здесь...</p>
+        </div>
+    </body>
+    </html>
+    """
 
 @app.route('/offer')
 def offer():
-    return "Страница публичной оферты"
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Публичная оферта - DocScan</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; background: #f7fafc; }
+            .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+            .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; font-weight: bold; }
+            h1 { color: #2d3748; margin-bottom: 30px; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <a href="/" class="back-link">← Назад на главную</a>
+            <h1>Публичная оферта</h1>
+            <p>Полный текст публичной оферты будет здесь...</p>
+        </div>
+    </body>
+    </html>
+    """
 
 if __name__ == '__main__':
     print("🚀 DocScan Server запущен!")
