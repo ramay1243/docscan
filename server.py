@@ -1310,40 +1310,6 @@ def offer():
     </body>
     </html>
     """
-@app.route('/check-users')
-def check_users():
-    return jsonify({
-        'total_users': len(users_db),
-        'users': list(users_db.keys()),
-        'file_exists': os.path.exists(USER_DB_FILE),
-        'users_db_size': len(users_db)
-    })
-    @app.route('/test-save')
-def test_save():
-    """Тест сохранения пользователей"""
-    try:
-        # Создаем тестового пользователя
-        test_id = "test_user_123"
-        users_db[test_id] = {
-            'user_id': test_id,
-            'plan': 'free', 
-            'used_today': 1,
-            'last_reset': date.today().isoformat(),
-            'total_used': 1,
-            'created_at': datetime.now().isoformat()
-        }
-        
-        # Пробуем сохранить
-        save_users()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Тестовый пользователь создан и сохранен',
-            'total_users': len(users_db),
-            'test_user': test_id in users_db
-        })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
 
 if __name__ == '__main__':
     print("🚀 DocScan Server запущен!")
