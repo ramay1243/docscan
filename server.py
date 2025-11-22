@@ -562,7 +562,7 @@ def home():
             loadUser();
         </script>
 
-    
+    </div>
     <!-- ФУТЕР -->
     <div style="width: 100%; text-align: center; padding: 30px 0; color: #718096; border-top: 1px solid #e2e8f0; margin-top: 50px; background: white;">
         <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
