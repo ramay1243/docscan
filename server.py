@@ -118,7 +118,6 @@ def generate_user_id():
     return str(uuid.uuid4())[:8]
 
 def get_user(user_id=None):
-    """Получает или создает пользователя"""
     if not user_id:
         user_id = generate_user_id()
     
@@ -129,9 +128,10 @@ def get_user(user_id=None):
             'used_today': 0,
             'last_reset': date.today().isoformat(),
             'total_used': 0,
-            'created_at': datetime.now().isoformat()
+            'created_at': datetime.now().isoformat(),
+            'plan_expires': None  # ДОБАВИЛИ
         }
-        save_users()  # Сохраняем при создании нового
+        save_users()
         print(f"👤 Создан новый пользователь: {user_id}")
     
     user = users_db[user_id]
@@ -140,16 +140,28 @@ def get_user(user_id=None):
     if user['last_reset'] < date.today().isoformat():
         user['used_today'] = 0
         user['last_reset'] = date.today().isoformat()
-        save_users()  # Сохраняем при сбросе лимита
-        print(f"🔄 Сброшен дневной лимит для {user_id}")
     
+    # ПРОВЕРЯЕМ ПРОСРОЧКУ ТАРИФА - ДОБАВИЛИ
+    if user['plan'] != 'free' and user.get('plan_expires'):
+        if user['plan_expires'] < date.today().isoformat():
+            user['plan'] = 'free'
+            user['plan_expires'] = None
+            print(f"🔄 Тариф пользователя {user_id} сброшен на бесплатный (истек)")
+    
+    save_users()
     return user
 
 def can_analyze(user_id='default'):
-    """Проверяет может ли пользователь сделать анализ"""
     user = get_user(user_id)
+    
+    # Дополнительная проверка (на всякий случай)
+    if user['plan'] != 'free' and user.get('plan_expires'):
+        if user['plan_expires'] < date.today().isoformat():
+            user['plan'] = 'free'
+            user['plan_expires'] = None
+            save_users()
+    
     return user['used_today'] < PLANS[user['plan']]['daily_limit']
-
 def record_usage(user_id='default'):
     """Записывает использование"""
     user = get_user(user_id)
@@ -1466,13 +1478,62 @@ def payment_success():
 
 @app.route('/payment-webhook', methods=['POST'])
 def payment_webhook():
-    """Webhook для уведомлений от ЮMoney (будет настроен позже)"""
+    """Webhook для уведомлений от ЮMoney - АВТОМАТИЧЕСКАЯ АКТИВАЦИЯ"""
     try:
         print("🔄 Webhook получен от ЮMoney")
+        
+        # Парсим данные от ЮMoney
+        data = request.json or request.form
+        print(f"📨 Данные от ЮMoney: {data}")
+        
+        # Извлекаем user_id из метки (label)
+        label = data.get('label', '')
+        if label and '_' in label:
+            user_id, plan_type = label.split('_')
+        else:
+            # Если нет метки, используем другие поля
+            user_id = data.get('customerNumber') or data.get('user_id')
+            plan_type = 'basic'
+        
+        if user_id and user_id != 'label':
+            # Активируем тариф автоматически
+            activate_response = activate_plan(user_id, plan_type)
+            print(f"✅ Тариф активирован для {user_id}: {activate_response}")
+        
         return jsonify({'success': True})
+        
     except Exception as e:
         print(f"❌ Ошибка webhook: {e}")
-        return jsonify({'success': False})
+        return jsonify({'success': False, 'error': str(e)})
+
+def activate_plan(user_id, plan_type='basic'):
+    """Активация тарифа для пользователя"""
+    try:
+        if plan_type not in PLANS:
+            return {'success': False, 'error': 'Неверный тариф'}
+        
+        user = get_user(user_id)
+        
+        # Устанавливаем тариф на 30 дней
+        from datetime import timedelta
+        expire_date = date.today() + timedelta(days=30)
+        
+        user['plan'] = plan_type
+        user['plan_expires'] = expire_date.isoformat()
+        user['used_today'] = 0  # Сбрасываем дневной лимит
+        
+        save_users()
+        
+        print(f"🎉 Активирован тариф {plan_type} для пользователя {user_id} до {expire_date}")
+        
+        return {
+            'success': True,
+            'message': f'Тариф {PLANS[plan_type]["name"]} активирован до {expire_date}'
+        }
+        
+    except Exception as e:
+        print(f"❌ Ошибка активации тарифа: {e}")
+        return {'success': False, 'error': str(e)}
 
 if __name__ == '__main__':
     print("🚀 DocScan Server запущен!")
