@@ -561,19 +561,23 @@ def home():
             // Загружаем пользователя при старте
             loadUser();
         </script>
-        <!-- Футер -->
-            <footer style="margin-top: 60px; padding: 30px 0; text-align: center; color: #718096; border-top: 1px solid #e2e8f0;">
-                <div style="max-width: 800px; margin: 0 auto;">
-                    <div style="margin-bottom: 20px;">
-                        <a href="/terms" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Пользовательское соглашение</a>
-                        <a href="/privacy" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Политика конфиденциальности</a>
-                        <a href="/offer" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Публичная оферта</a>
-                        <a href="mailto:support@docscan.example.com" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Техподдержка</a>
-                    </div>
-                    <div style="font-size: 14px;">
-                        © 2024 DocScan. Все права защищены.
-                    </div>
-                </div>
+
+    <!-- ФУТЕР -->
+    <div style="width: 100%; margin-top: 60px; padding: 30px 0; text-align: center; color: #718096; border-top: 1px solid #e2e8f0; background: white;">
+        <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
+            <div style="margin-bottom: 20px;">
+                <a href="/terms" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Пользовательское соглашение</a>
+                <a href="/privacy" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Политика конфиденциальности</a>
+                <a href="/offer" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Публичная оферта</a>
+                <a href="mailto:support@docscan.example.com" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Техподдержка</a>
+            </div>
+            <div style="font-size: 14px;">
+                © 2024 DocScan. Все права защищены.
+            </div>
+        </div>
+    </div>
+
+    </body>
             </footer>
     </body>
     </html>
