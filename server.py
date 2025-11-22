@@ -1417,17 +1417,9 @@ def create_payment():
         
         plan = PLANS[plan_type]
         
-        # Создаем ссылку для оплаты через ЮMoney
-        base_url = "https://yoomoney.ru/oauth/authorize"
-        params = {
-            'client_id': YOOMONEY_CLIENT_ID,
-            'response_type': 'code',
-            'redirect_uri': YOOMONEY_REDIRECT_URI,
-            'scope': 'account-info operation-history operation-details',
-            'state': f'{user_id}_{plan_type}'
-        }
-        
-        payment_url = f"{base_url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}"
+        # Создаем ссылку для ПРЯМОГО платежа в ЮMoney
+        yoomoney_wallet = "4100119233250205"  # ТВОЙ НОМЕР КОШЕЛЬКА
+        payment_url = f"https://yoomoney.ru/quickpay/confirm.xml?receiver={yoomoney_wallet}&quickpay-form=button&paymentType=AC&targets=Тариф {plan['name']} - DocScan&sum={plan['price']}&label={user_id}_{plan_type}"
         
         return jsonify({
             'success': True,
@@ -1441,36 +1433,37 @@ def create_payment():
 @app.route('/payment-success')
 def payment_success():
     """Страница успешной оплаты"""
-    code = request.args.get('code')
-    state = request.args.get('state')
-    
-    if state:
-        try:
-            user_id, plan_type = state.split('_')
-            return f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Платеж обрабатывается - DocScan</title>
-                <style>
-                    body {{ font-family: Arial; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }}
-                    .container {{ background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; }}
-                    .success-icon {{ font-size: 4em; color: #48bb78; margin-bottom: 20px; }}
-                    .btn {{ background: #48bb78; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 20px; }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="success-icon">⏳</div>
-                    <h1>Платеж получен!</h1>
-                    <p>Тариф активируется в течение 5 минут.</p>
-                    <p><strong>ID пользователя:</strong> {user_id}</p>
-                    <p><strong>Тариф:</strong> {plan_type}</p>
-                    <a href="/" class="btn">Вернуться в DocScan</a>
-                </div>
-            </body>
-            </html>
-            """
+    # Показываем простую страницу успеха
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Платеж успешен - DocScan</title>
+        <style>
+            body { font-family: Arial; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+            .container { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; }
+            .success-icon { font-size: 4em; color: #48bb78; margin-bottom: 20px; }
+            .btn { background: #48bb78; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 20px; }
+            .instructions { background: #f0fff4; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="success-icon">✅</div>
+            <h1>Платеж успешно завершен!</h1>
+            <p>Спасибо за оплату! Тариф будет активирован в течение 5 минут.</p>
+            
+            <div class="instructions">
+                <h3>📧 Для ускорения активации:</h3>
+                <p>Напишите нам в поддержку: <strong>docscanhelp@gmail.com</strong></p>
+                <p>Укажите ваш ID и сумму платежа</p>
+            </div>
+            
+            <a href="/" class="btn">Вернуться в DocScan</a>
+        </div>
+    </body>
+    </html>
+    """
         except:
             pass
     
