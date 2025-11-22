@@ -8,6 +8,7 @@ import os
 import uuid
 from datetime import datetime, date
 import secrets
+from functools import wraps
 
 app = Flask(__name__)
 # Добавляем секретный ключ для сессий
@@ -764,6 +765,7 @@ def admin_login():
 
 def require_admin_auth(f):
     """Декоратор для проверки авторизации администратора"""
+    @wraps(f)
     def decorated_function(*args, **kwargs):
         session_id = request.cookies.get('admin_session')
         
