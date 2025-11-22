@@ -1360,6 +1360,115 @@ Disallow: /admin-login
 
 Sitemap: https://docscan-ekjj.onrender.com/sitemap.xml""", 200, {'Content-Type': 'text/plain'}
 
+# 🔐 ПЛАТЕЖНАЯ СИСТЕМА ЮMONEY
+
+YOOMONEY_CLIENT_ID = os.getenv('YOOMONEY_CLIENT_ID')
+YOOMONEY_CLIENT_SECRET = os.getenv('YOOMONEY_CLIENT_SECRET')
+YOOMONEY_REDIRECT_URI = os.getenv('YOOMONEY_REDIRECT_URI', 'https://docscan-ekjj.onrender.com/payment-success')
+
+@app.route('/create-payment', methods=['POST'])
+def create_payment():
+    """Создание платежа в ЮMoney"""
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        plan_type = data.get('plan')
+        
+        if not user_id or plan_type not in PLANS:
+            return jsonify({'success': False, 'error': 'Неверные данные'})
+        
+        plan = PLANS[plan_type]
+        
+        # Создаем ссылку для оплаты через ЮMoney
+        base_url = "https://yoomoney.ru/oauth/authorize"
+        params = {
+            'client_id': YOOMONEY_CLIENT_ID,
+            'response_type': 'code',
+            'redirect_uri': YOOMONEY_REDIRECT_URI,
+            'scope': 'account-info operation-history operation-details',
+            'state': f'{user_id}_{plan_type}'
+        }
+        
+        payment_url = f"{base_url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}"
+        
+        return jsonify({
+            'success': True,
+            'payment_url': payment_url,
+            'message': f'Оплата тарифа {plan["name"]} - {plan["price"]}₽'
+        })
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/payment-success')
+def payment_success():
+    """Страница успешной оплаты"""
+    code = request.args.get('code')
+    state = request.args.get('state')
+    
+    if state:
+        try:
+            user_id, plan_type = state.split('_')
+            return f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Платеж обрабатывается - DocScan</title>
+                <style>
+                    body {{ font-family: Arial; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }}
+                    .container {{ background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; }}
+                    .success-icon {{ font-size: 4em; color: #48bb78; margin-bottom: 20px; }}
+                    .btn {{ background: #48bb78; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 20px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="success-icon">⏳</div>
+                    <h1>Платеж получен!</h1>
+                    <p>Тариф активируется в течение 5 минут.</p>
+                    <p><strong>ID пользователя:</strong> {user_id}</p>
+                    <p><strong>Тариф:</strong> {plan_type}</p>
+                    <a href="/" class="btn">Вернуться в DocScan</a>
+                </div>
+            </body>
+            </html>
+            """
+        except:
+            pass
+    
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Платеж успешен - DocScan</title>
+        <style>
+            body { font-family: Arial; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+            .container { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; }
+            .success-icon { font-size: 4em; color: #48bb78; margin-bottom: 20px; }
+            .btn { background: #48bb78; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="success-icon">✅</div>
+            <h1>Платеж успешно завершен!</h1>
+            <p>Тариф активирован. Возвращайтесь в приложение.</p>
+            <a href="/" class="btn">Вернуться в DocScan</a>
+        </div>
+    </body>
+    </html>
+    """
+
+@app.route('/payment-webhook', methods=['POST'])
+def payment_webhook():
+    """Webhook для уведомлений от ЮMoney (будет настроен позже)"""
+    try:
+        print("🔄 Webhook получен от ЮMoney")
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"❌ Ошибка webhook: {e}")
+        return jsonify({'success': False})
+
 if __name__ == '__main__':
     print("🚀 DocScan Server запущен!")
     print("🤖 YandexGPT: Активен")
