@@ -346,8 +346,6 @@ def home():
             <div class="user-info" id="userInfo">
                 <strong>👤 Ваш ID:</strong> <span id="userId">Загрузка...</span><br>
                 <strong>📊 Анализов сегодня:</strong> <span id="usageInfo">0/1</span><br>
-                <button class="btn" onclick="copyUserId()" style="background: #48bb78; padding: 8px 15px; font-size: 0.9em;">📋 Скопировать ID</button>
-                <button class="btn" onclick="generateNewId()" style="background: #ed8936; padding: 8px 15px; font-size: 0.9em;">🆕 Новый ID</button>
             </div>
 
             <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
