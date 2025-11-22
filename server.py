@@ -613,10 +613,10 @@ def home():
                     <a href="/terms" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Пользовательское соглашение</a>
                     <a href="/privacy" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Политика конфиденциальности</a>
                     <a href="/offer" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Публичная оферта</a>
-                    <a href="mailto:support@docscan.example.com" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Техподдержка</a>
+                    <a href="mailto:docscanhelp@gmail.com" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Техподдержка</a>
                 </div>
                 <div style="font-size: 14px;">
-                    © 2024 DocScan. Все права защищены.
+                    © 2025 DocScan. Все права защищены.
                 </div>
             </div>
         </div>
@@ -1301,11 +1301,11 @@ def offer():
 
             <div class="contact">
                 <h3>Реквизиты для связи</h3>
-                <p><strong>Техническая поддержка:</strong> support@docscan.example.com</p>
-                <p><strong>По вопросам сотрудничества:</strong> partner@docscan.example.com</p>
+                <p><strong>Техническая поддержка:</strong> docscanhelp@gmail.com</p>
+                <p><strong>По вопросам сотрудничества:</strong> docscanhelp@gmail.com</p>
             </div>
 
-            <p><em>Оферта действует с 22 ноября 2024 года</em></p>
+            <p><em>Оферта действует с 22 ноября 2025 года</em></p>
         </div>
     </body>
     </html>
