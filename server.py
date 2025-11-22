@@ -1465,7 +1465,6 @@ def payment_success():
     </html>
     """
 
-return """
 <!DOCTYPE html>
 <html>
 <head>
