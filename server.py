@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, make_response, session, redirect, url_for
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import PyPDF2
 import docx
@@ -7,142 +7,86 @@ import tempfile
 import os
 import uuid
 from datetime import datetime, date
-import json
-import hashlib
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'super-secret-key-12345')
-
+# Исправляем CORS для работы на Render
 CORS(app, resources={r"/*": {"origins": "*"}})
 
+# Загружаем переменные окружения
 from dotenv import load_dotenv
 load_dotenv()
 
+# Данные Yandex Cloud из переменных окружения
 YANDEX_API_KEY = os.getenv('YANDEX_API_KEY')
 YANDEX_FOLDER_ID = os.getenv('YANDEX_FOLDER_ID')
 
-# Файлы данных
-USERS_FILE = 'users_data.json'
-ADMIN_FILE = 'admin_data.json'
-
-# Дефолтные админские учетки
-DEFAULT_ADMIN = {
-    'username': 'admin',
-    'password_hash': hashlib.sha256('admin123'.encode()).hexdigest(),
-    'is_default': True
-}
-
-def load_users():
-    try:
-        if os.path.exists(USERS_FILE):
-            with open(USERS_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-    except:
-        pass
-    return {
-        'default': {
-            'plan': 'free', 
-            'used_today': 0, 
-            'last_reset': date.today().isoformat(), 
-            'total_used': 0,
-            'created_at': datetime.now().isoformat(),
-            'last_activity': datetime.now().isoformat()
-        }
+# Система пользователей и лимитов
+users_db = {
+    'default': {
+        'plan': 'free',
+        'used_today': 0,
+        'last_reset': date.today().isoformat(),
+        'total_used': 0
     }
-
-def save_users():
-    try:
-        with open(USERS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(users_db, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"Ошибка сохранения пользователей: {e}")
-
-def load_admin():
-    try:
-        if os.path.exists(ADMIN_FILE):
-            with open(ADMIN_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-    except:
-        pass
-    
-    # Создаем дефолтные учетки
-    try:
-        with open(ADMIN_FILE, 'w', encoding='utf-8') as f:
-            json.dump(DEFAULT_ADMIN, f, indent=2)
-    except:
-        pass
-    
-    print("🔐 ДЕФОЛТНЫЕ АДМИНСКИЕ УЧЕТКИ:")
-    print("👤 Логин: admin")
-    print("🔑 Пароль: admin123")
-    print("🚨 СМЕНИТЕ ПАРОЛЬ!")
-    
-    return DEFAULT_ADMIN
-
-def save_admin():
-    try:
-        with open(ADMIN_FILE, 'w', encoding='utf-8') as f:
-            json.dump(admin_data, f, indent=2)
-    except Exception as e:
-        print(f"Ошибка сохранения админских данных: {e}")
-
-# Загружаем данные
-users_db = load_users()
-admin_data = load_admin()
-
-# Тарифы
-PLANS = {
-    'free': {'daily_limit': 1, 'ai_access': True, 'price': 0, 'name': 'Бесплатный'},
-    'basic': {'daily_limit': 10, 'ai_access': True, 'price': 199, 'name': 'Базовый'},
-    'premium': {'daily_limit': 50, 'ai_access': True, 'price': 399, 'name': 'Премиум'},
-    'unlimited': {'daily_limit': 1000, 'ai_access': True, 'price': 800, 'name': 'Безлимитный'}
 }
 
-# Функции для пользователей
-def generate_user_id():
-    return str(uuid.uuid4())
+# ОБНОВЛЕННЫЕ ТАРИФЫ - 1 бесплатный, потом платные
+PLANS = {
+    'free': {
+        'daily_limit': 1,  # БЫЛО 3, ТЕПЕРЬ 1
+        'ai_access': True,
+        'price': 0,
+        'name': 'Бесплатный'
+    },
+    'basic': {
+        'daily_limit': 10,  # 10 анализов в день
+        'ai_access': True, 
+        'price': 199,
+        'name': 'Базовый'
+    },
+    'premium': {
+        'daily_limit': 50,  # 50 анализов в день
+        'ai_access': True,
+        'price': 399,
+        'name': 'Премиум'
+    },
+    'unlimited': {
+        'daily_limit': 1000,  # Фактически безлимит
+        'ai_access': True,
+        'price': 800,
+        'name': 'Безлимитный'
+    }
+}
 
-def get_or_create_user(request):
-    user_id = request.cookies.get('user_id')
-    
-    if not user_id or user_id not in users_db:
-        user_id = generate_user_id()
+def get_user(user_id='default'):
+    """Получает или создает пользователя"""
+    if user_id not in users_db:
         users_db[user_id] = {
-            'plan': 'free', 
-            'used_today': 0, 
-            'last_reset': date.today().isoformat(), 
-            'total_used': 0,
-            'created_at': datetime.now().isoformat(),
-            'last_activity': datetime.now().isoformat(),
-            'user_agent': request.headers.get('User-Agent', 'unknown')[:100],
-            'ip_address': request.remote_addr
+            'plan': 'free',
+            'used_today': 0,
+            'last_reset': date.today().isoformat(),
+            'total_used': 0
         }
-        save_users()
-        print(f"🎉 Новый пользователь: {user_id}")
     
-    # Обновляем активность
-    users_db[user_id]['last_activity'] = datetime.now().isoformat()
-    
-    return user_id
-
-def can_analyze(user_id):
-    user = users_db.get(user_id)
-    if not user:
-        return False
+    user = users_db[user_id]
     
     # Сбрасываем дневной лимит если новый день
     if user['last_reset'] < date.today().isoformat():
         user['used_today'] = 0
         user['last_reset'] = date.today().isoformat()
-        save_users()
     
+    return user
+
+def can_analyze(user_id='default'):
+    """Проверяет может ли пользователь сделать анализ"""
+    user = get_user(user_id)
     return user['used_today'] < PLANS[user['plan']]['daily_limit']
 
-def record_usage(user_id):
-    if user_id in users_db:
-        users_db[user_id]['used_today'] += 1
-        users_db[user_id]['total_used'] += 1
-        save_users()
+def record_usage(user_id='default'):
+    """Записывает использование"""
+    user = get_user(user_id)
+    user['used_today'] += 1
+    user['total_used'] += 1
 
 # Функции анализа документов
 def extract_text_from_pdf(file_path):
@@ -166,17 +110,38 @@ def extract_text_from_docx(file_path):
         return f"Ошибка чтения DOCX: {str(e)}"
     return text
 
+def parse_fallback_response(ai_response):
+    """Резервный парсинг для неструктурированных ответов"""
+    risks = []
+    recommendations = []
+    
+    lines = [line.strip() for line in ai_response.split('\n') if line.strip()]
+    
+    for i, line in enumerate(lines):
+        line_lower = line.lower()
+        
+        # Ищем риски по ключевым словам
+        if any(word in line_lower for word in ['риск', 'опасность', 'проблема', 'недостаток', 'слабое место', 'угроза']):
+            # Берем следующие несколько строк как описание риска
+            for j in range(i+1, min(i+4, len(lines))):
+                next_line = lines[j]
+                if next_line and len(next_line) > 20 and not next_line.lower().startswith('рекомендац'):
+                    risks.append(next_line)
+                    break
+        
+        # Ищем рекомендации по ключевым словам
+        elif any(word in line_lower for word in ['рекомендац', 'совет', 'следует', 'рекомендуется', 'улучшить', 'добавить']):
+            # Берем следующие несколько строк как рекомендацию
+            for j in range(i+1, min(i+4, len(lines))):
+                next_line = lines[j]
+                if next_line and len(next_line) > 20 and not next_line.lower().startswith('риск'):
+                    recommendations.append(next_line)
+                    break
+    
+    return risks, recommendations
+
 def analyze_with_yandexgpt(text):
     """Анализирует текст с помощью YandexGPT"""
-    if not YANDEX_API_KEY or not YANDEX_FOLDER_ID:
-        return {
-            'risks': ['❌ YandexGPT не настроен'],
-            'warnings': [],
-            'summary': 'AI анализ недоступен',
-            'recommendations': ['🔧 Настройте Yandex Cloud API ключи'],
-            'ai_used': False
-        }
-    
     try:
         headers = {
             "Authorization": f"Api-Key {YANDEX_API_KEY}",
@@ -187,7 +152,7 @@ def analyze_with_yandexgpt(text):
             "modelUri": f"gpt://{YANDEX_FOLDER_ID}/yandexgpt-lite/latest",
             "completionOptions": {
                 "stream": False,
-                "temperature': 0.1,
+                "temperature": 0.1,
                 "maxTokens": 2000
             },
             "messages": [
@@ -226,29 +191,44 @@ def analyze_with_yandexgpt(text):
             result = response.json()
             ai_response = result['result']['alternatives'][0]['message']['text']
             
-            # Парсинг ответа
+            # Улучшенный парсинг ответа
+            lines = [line.strip() for line in ai_response.split('\n') if line.strip()]
             risks = []
             recommendations = []
+            
             current_section = None
             
-            for line in ai_response.split('\n'):
-                line = line.strip()
-                if not line:
-                    continue
-                    
+            for line in lines:
                 line_lower = line.lower()
-                if 'риск' in line_lower:
+                
+                # Определяем разделы
+                if any(marker in line_lower for marker in ['риск', 'проблем', 'опасност', 'недостаток', 'слаб']):
                     current_section = 'risks'
                     continue
-                elif 'рекомендац' in line_lower:
+                elif any(marker in line_lower for marker in ['рекомендац', 'совet', 'улучшен', 'исправлен']):
                     current_section = 'recommendations'
                     continue
                 
-                if line.startswith(('-', '•', '—', '*')) and len(line) > 5:
+                # Пропускаем заголовки и общие фразы
+                if any(phrase in line_lower for phrase in [
+                    'общая оценка', 'документ выглядит', 'безопасн', 'итог', 'заключен'
+                ]):
+                    continue
+                
+                # Добавляем пункты только если они начинаются с маркера списка
+                if line.startswith(('-', '•', '—', '*', '1.', '2.', '3.', '4.', '5.')) and len(line) > 5:
                     if current_section == 'risks':
-                        risks.append(line.lstrip('-•—* '))
+                        risks.append(line.lstrip('-•—*123456789. '))
                     elif current_section == 'recommendations':
-                        recommendations.append(line.lstrip('-•—* '))
+                        recommendations.append(line.lstrip('-•—*123456789. '))
+            
+            # Если не нашли структурированный ответ, используем эвристический подход
+            if not risks or not recommendations:
+                risks, recommendations = parse_fallback_response(ai_response)
+            
+            # Очистка от дубликатов и пустых строк
+            risks = list(dict.fromkeys([r for r in risks if r and len(r) > 10]))
+            recommendations = list(dict.fromkeys([r for r in recommendations if r and len(r) > 10]))
             
             return {
                 'risks': risks if risks else ['✅ Критических рисков не обнаружено'],
@@ -277,7 +257,7 @@ def analyze_with_yandexgpt(text):
 
 def analyze_text(text, user_id='default'):
     """Основная функция анализа"""
-    user = users_db.get(user_id, users_db['default'])
+    user = get_user(user_id)
     
     # Проверяем доступ к AI по тарифу
     if PLANS[user['plan']]['ai_access']:
@@ -294,22 +274,12 @@ def analyze_text(text, user_id='default'):
         'ai_used': False
     }
 
-# Аутентификация админа
-def admin_required(f):
-    def decorated(*args, **kwargs):
-        if not session.get('admin_logged_in'):
-            return redirect('/admin/login')
-        return f(*args, **kwargs)
-    decorated.__name__ = f.__name__
-    return decorated
-
-# ГЛАВНАЯ СТРАНИЦА
+# API endpoints
 @app.route('/')
 def home():
-    user_id = get_or_create_user(request)
-    
-    html = """
-    <!DOCTYPE html>
+    """Главная страница с интерфейсом"""
+    return """
+        <!DOCTYPE html>
     <html lang="ru">
     <head>
         <meta charset="UTF-8">
@@ -409,7 +379,7 @@ def home():
                 const file = event.target.files[0];
                 if (!file) return;
                 
-                if (!file.name.match(/\\.(pdf|docx|txt)$/)) {
+                if (!file.name.match(/\.(pdf|docx|txt)$/)) {
                     alert('Пожалуйста, выберите файл в формате PDF, DOCX или TXT');
                     return;
                 }
@@ -435,7 +405,7 @@ def home():
                     const formData = new FormData();
                     formData.append('file', selectedFile);
 
-                    const response = await fetch('/analyze', {
+                    const response = await fetch(window.location.origin + '/analyze', {
                         method: 'POST',
                         body: formData
                     });
@@ -459,7 +429,7 @@ def home():
                     document.getElementById('loading').style.display = 'none';
                     
                     if (error.message.includes('402')) {
-                        alert('❌ Бесплатный лимит исчерпан!\\\\n\\\\nСегодня вы использовали 1/1 бесплатный анализ.\\\\n\\\\n💎 Перейдите на платный тариф для продолжения.');
+                        alert('❌ Бесплатный лимит исчерпан!\\n\\nСегодня вы использовали 1/1 бесплатный анализ.\\n\\n💎 Перейдите на платный тариф для продолжения.');
                     } else {
                         alert('Ошибка соединения: ' + error.message);
                     }
@@ -503,23 +473,18 @@ def home():
     </body>
     </html>
     """
-    
-    response = make_response(html)
-    response.set_cookie('user_id', user_id, max_age=365*24*60*60, httponly=True, secure=False)
-    return response
 
-# Анализ документа
 @app.route('/analyze', methods=['POST'])
 def analyze_document():
-    user_id = get_or_create_user(request)
+    user_id = 'default'
     
     # Проверяем лимиты
     if not can_analyze(user_id):
-        user = users_db[user_id]
+        user = get_user(user_id)
         plan = PLANS[user['plan']]
         return jsonify({
             'success': False,
-            'error': f'❌ Бесплатный лимит исчерпан! Сегодня использовано {user["used_today"]}/{plan["daily_limit"]} анализов.',
+            'error': f'❌ Бесплатный лимит исчерпан! Сегодня использовано 1/1 анализ.\\n\\n💎 Перейдите на платный тариф для продолжения использования:',
             'upgrade_required': True
         }), 402
     
@@ -558,7 +523,7 @@ def analyze_document():
             record_usage(user_id)
             
             # Добавляем информацию о лимитах в ответ
-            user = users_db[user_id]
+            user = get_user(user_id)
             plan = PLANS[user['plan']]
             analysis_result['usage_info'] = {
                 'used_today': user['used_today'],
@@ -584,379 +549,179 @@ def analyze_document():
     except Exception as e:
         return jsonify({'error': f'Ошибка обработки: {str(e)}'}), 500
 
-# АДМИНКА
-@app.route('/admin/login', methods=['GET', 'POST'])
-def admin_login():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
-        if (username == admin_data['username'] and 
-            hashlib.sha256(password.encode()).hexdigest() == admin_data['password_hash']):
-            
-            session['admin_logged_in'] = True
-            session['admin_user'] = username
-            session['login_time'] = datetime.now().isoformat()
-            
-            print(f"🔐 АДМИН ВОШЕЛ: {username}")
-            return redirect('/admin')
-        else:
-            return """
-            <html>
-            <body style="font-family: Arial; margin: 40px;">
-                <h2>❌ Неверный логин или пароль</h2>
-                <a href="/admin/login">← Назад</a>
-            </body>
-            </html>
-            """
+@app.route('/usage', methods=['GET'])
+def get_usage():
+    """Получить информацию об использовании"""
+    user_id = 'default'
+    user = get_user(user_id)
+    plan = PLANS[user['plan']]
     
-    security_warning = ""
-    if admin_data.get('is_default'):
-        security_warning = """
-        <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #e74c3c;">
-            🚨 ВНИМАНИЕ: Используются стандартные логин и пароль! Немедленно смените их после входа!
-        </div>
-        """
-    
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Admin Login - DocScan</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body {{ font-family: Arial; margin: 40px; background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; }}
-            .login-box {{ background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); max-width: 400px; width: 100%; }}
-            h2 {{ color: #2c3e50; margin-bottom: 10px; text-align: center; }}
-            .subtitle {{ color: #7f8c8d; text-align: center; margin-bottom: 30px; }}
-            input {{ width: 100%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; }}
-            button {{ width: 100%; padding: 15px; background: #3498db; color: white; border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; transition: background 0.3s; }}
-            button:hover {{ background: #2980b9; }}
-        </style>
-    </head>
-    <body>
-        <div class="login-box">
-            <h2>🔐 Админ-панель</h2>
-            <p class="subtitle">DocScan - Система управления</p>
-            
-            {security_warning}
-            
-            <form method="POST">
-                <input type="text" name="username" placeholder="Логин" value="{admin_data['username']}" required>
-                <input type="password" name="password" placeholder="Пароль" required>
-                <button type="submit">Войти</button>
-            </form>
-        </div>
-    </body>
-    </html>
-    """
+    return jsonify({
+        'plan': user['plan'],
+        'plan_name': plan['name'],
+        'used_today': user['used_today'],
+        'daily_limit': plan['daily_limit'],
+        'remaining': plan['daily_limit'] - user['used_today'],
+        'total_used': user['total_used']
+    })
 
-@app.route('/admin/logout')
-def admin_logout():
-    session.clear()
-    return redirect('/admin/login')
+@app.route('/plans', methods=['GET'])
+def get_plans():
+    """Получить информацию о тарифах"""
+    return jsonify(PLANS)
 
+@app.route('/api')
+def api_info():
+    return jsonify({
+        'message': 'DocScan API работает!',
+        'status': 'active',
+        'ai_available': True,
+        'pdf_export': False
+    })
+# Админ-панель для выдачи тарифов
 @app.route('/admin')
-@admin_required
 def admin_panel():
-    total_users = len(users_db)
-    total_analyses = sum(user['total_used'] for user in users_db.values())
-    active_today = sum(1 for user in users_db.values() 
-                      if user.get('last_activity', '').startswith(date.today().isoformat()))
-    new_today = sum(1 for user in users_db.values() 
-                   if user.get('created_at', '').startswith(date.today().isoformat()))
-    
-    users_html = ""
-    for user_id, user_data in users_db.items():
-        is_new = user_data.get('created_at', '').startswith(date.today().isoformat())
-        users_html += f"""
-        <div style="background: white; padding: 15px; margin: 10px 0; border-radius: 10px; border-left: 4px solid {'#27ae60' if is_new else '#3498db'};">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <strong>{user_id}</strong>
-                <span style="background: #3498db; color: white; padding: 3px 8px; border-radius: 10px; font-size: 0.8em;">
-                    {user_data['plan']}
-                </span>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 10px 0;">
-                <div style="text-align: center;">
-                    <div>📊 Использовано</div>
-                    <strong>{user_data['used_today']}/{PLANS[user_data['plan']]['daily_limit']}</strong>
-                </div>
-                <div style="text-align: center;">
-                    <div>📈 Всего</div>
-                    <strong>{user_data['total_used']}</strong>
-                </div>
-                <div style="text-align: center;">
-                    <div>📅 Создан</div>
-                    <strong>{user_data.get('created_at', 'N/A')[:10]}</strong>
-                </div>
-            </div>
-            {f'<div style="color: #27ae60; font-size: 0.9em;">🆕 Новый пользователь</div>' if is_new else ''}
-        </div>
-        """
-    
-    security_alert = ""
-    if admin_data.get('is_default'):
-        security_alert = """
-        <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #e74c3c;">
-            🚨 <strong>ВНИМАНИЕ БЕЗОПАСНОСТИ!</strong> 
-            Используются стандартные логин и пароль. 
-            <a href="/admin/change-password" style="color: #e74c3c; text-decoration: underline; font-weight: bold;">Сменить немедленно!</a>
-        </div>
-        """
-    
-    return f"""
+    return """
     <!DOCTYPE html>
     <html>
     <head>
         <title>Admin Panel - DocScan</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-            body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
-            .container {{ max-width: 1200px; margin: 0 auto; }}
-            .header {{ background: white; padding: 30px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }}
-            .admin-bar {{ background: #2c3e50; color: white; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }}
-            .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }}
-            .stat-card {{ background: white; padding: 25px; border-radius: 10px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }}
-            .stat-number {{ font-size: 2.5em; font-weight: bold; color: #3498db; margin: 10px 0; }}
-            .users-section {{ background: white; padding: 25px; border-radius: 15px; margin: 20px 0; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }}
-            .btn {{ background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; margin: 5px; }}
-            .btn-danger {{ background: #e74c3c; }}
-            .btn-success {{ background: #27ae60; }}
+            body { font-family: Arial; margin: 40px; }
+            .container { max-width: 600px; }
+            .user-card { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 8px; }
+            button { background: #667eea; color: white; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; }
         </style>
     </head>
     <body>
         <div class="container">
-            {security_alert}
+            <h1>🔧 Админ-панель DocScan</h1>
             
-            <div class="admin-bar">
-                <div>
-                    <strong>👤 Админ:</strong> {session.get('admin_user', 'admin')} 
-                    | <strong>🕒 Вход:</strong> {session.get('login_time', 'N/A')[:16]}
-                </div>
-                <div>
-                    <a href="/admin/change-password" class="btn btn-success">🔐 Сменить пароль</a>
-                    <a href="/admin/logout" class="btn btn-danger">🚪 Выйти</a>
-                </div>
-            </div>
-
-            <div class="header">
-                <h1>🔧 Админ-панель DocScan</h1>
-                <p>Управление пользователями и тарифами в реальном времени</p>
-                
-                <div class="stats">
-                    <div class="stat-card">
-                        <div>👥 Всего пользователей</div>
-                        <div class="stat-number">{total_users}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div>🆕 Новых сегодня</div>
-                        <div class="stat-number">{new_today}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div>📱 Активных сегодня</div>
-                        <div class="stat-number">{active_today}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div>📊 Всего анализов</div>
-                        <div class="stat-number">{total_analyses}</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="users-section">
-                <h3>👥 Все пользователи ({total_users})</h3>
-                <div style="margin-bottom: 20px;">
-                    <input type="text" id="searchUsers" placeholder="🔍 Поиск пользователей..." 
-                           style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em;">
-                </div>
-                <div id="usersList">
-                    {users_html if users_html else "<p>Пользователей нет</p>"}
-                </div>
-            </div>
-
-            <div class="users-section">
-                <h3>⚙️ Управление тарифами</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                    <div>
-                        <h4>Выдать тариф пользователю:</h4>
-                        <input type="text" id="userId" placeholder="ID пользователя" style="width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px;">
-                        <select id="planSelect" style="width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px;">
-                            <option value="free">Бесплатный (1 анализ)</option>
-                            <option value="basic">Базовый (10 анализов)</option>
-                            <option value="premium">Премиум (50 анализов)</option>
-                            <option value="unlimited">Безлимитный</option>
-                        </select>
-                        <button class="btn" onclick="setUserPlan()" style="width: 100%;">Выдать тариф</button>
-                    </div>
-                    <div>
-                        <h4>Быстрые действия:</h4>
-                        <button class="btn" onclick="loadUsers()">🔄 Обновить данные</button>
-                        <button class="btn" onclick="resetAllLimits()">🔄 Сбросить все лимиты</button>
-                        <button class="btn btn-success" onclick="createTestUser()">🧪 Создать тестового пользователя</button>
-                    </div>
-                </div>
-            </div>
+            <h3>Текущие пользователи:</h3>
+            <div id="usersList"></div>
+            
+            <h3>Выдать тариф пользователю:</h3>
+            <input type="text" id="userId" placeholder="ID пользователя (default)" value="default">
+            <select id="planSelect">
+                <option value="free">Бесплатный (1 анализ)</option>
+                <option value="basic">Базовый (10 анализов) - 199₽</option>
+                <option value="premium">Премиум (50 анализов) - 399₽</option>
+                <option value="unlimited">Безлимитный - 800₽</option>
+            </select>
+            <button onclick="setUserPlan()">Выдать тариф</button>
+            
+            <h3>Создать нового пользователя:</h3>
+            <input type="text" id="newUserId" placeholder="Новый ID пользователя">
+            <button onclick="createUser()">Создать пользователя</button>
         </div>
 
         <script>
-            function loadUsers() {{
-                location.reload();
-            }}
+            // Загружаем пользователей
+            function loadUsers() {
+                fetch('/admin/users')
+                    .then(r => r.json())
+                    .then(users => {
+                        let html = '';
+                        for (const [userId, userData] of Object.entries(users)) {
+                            html += `
+                                <div class="user-card">
+                                    <strong>ID:</strong> ${userId}<br>
+                                    <strong>Тариф:</strong> ${userData.plan} (${getPlanName(userData.plan)})<br>
+                                    <strong>Использовано сегодня:</strong> ${userData.used_today}/${getPlanLimit(userData.plan)}<br>
+                                    <button onclick="setUserPlanQuick('${userId}', 'basic')">Выдать Базовый</button>
+                                    <button onclick="setUserPlanQuick('${userId}', 'premium')">Выдать Премиум</button>
+                                    <button onclick="setUserPlanQuick('${userId}', 'unlimited')">Выдать Безлимитный</button>
+                                </div>
+                            `;
+                        }
+                        document.getElementById('usersList').innerHTML = html;
+                    });
+            }
 
-            function setUserPlan() {{
-                const userId = document.getElementById('userId').value;
+            function getPlanName(plan) {
+                const names = {free: 'Бесплатный', basic: 'Базовый', premium: 'Премиум', unlimited: 'Безлимитный'};
+                return names[plan] || plan;
+            }
+
+            function getPlanLimit(plan) {
+                const limits = {free: 1, basic: 10, premium: 50, unlimited: 1000};
+                return limits[plan] || 0;
+            }
+
+            function setUserPlan() {
+                const userId = document.getElementById('userId').value || 'default';
                 const plan = document.getElementById('planSelect').value;
                 
-                if (!userId) {{
-                    alert('Введите ID пользователя');
-                    return;
-                }}
-                
-                fetch('/admin/set-plan', {{
+                fetch('/admin/set-plan', {
                     method: 'POST',
-                    headers: {{'Content-Type': 'application/json'}},
-                    body: JSON.stringify({{user_id: userId, plan: plan}})
-                }})
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: userId, plan: plan})
+                })
                 .then(r => r.json())
-                .then(result => {{
+                .then(result => {
                     alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
-                    if (result.success) loadUsers();
-                }})
-                .catch(error => {{
-                    alert('Ошибка сети: ' + error);
-                }});
-            }}
+                    loadUsers();
+                });
+            }
 
-            function resetAllLimits() {{
-                if (confirm('Сбросить дневные лимиты для ВСЕХ пользователей?')) {{
-                    fetch('/admin/reset-all-limits', {{method: 'POST'}})
-                    .then(r => r.json())
-                    .then(result => {{
-                        alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
-                        if (result.success) loadUsers();
-                    }});
-                }}
-            }}
-
-            function createTestUser() {{
-                fetch('/admin/create-test-user', {{method: 'POST'}})
+            function setUserPlanQuick(userId, plan) {
+                fetch('/admin/set-plan', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: userId, plan: plan})
+                })
                 .then(r => r.json())
-                .then(result => {{
+                .then(result => {
                     alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
-                    if (result.success) loadUsers();
-                }});
-            }}
+                    loadUsers();
+                });
+            }
 
-            // Поиск пользователей
-            document.getElementById('searchUsers').addEventListener('input', function(e) {{
-                const searchTerm = e.target.value.toLowerCase();
-                const userCards = document.querySelectorAll('#usersList > div');
+            function createUser() {
+                const userId = document.getElementById('newUserId').value;
+                if (!userId) return alert('Введите ID пользователя');
                 
-                userCards.forEach(card => {{
-                    const userId = card.querySelector('strong').textContent.toLowerCase();
-                    if (userId.includes(searchTerm)) {{
-                        card.style.display = 'block';
-                    }} else {{
-                        card.style.display = 'none';
-                    }}
-                }});
-            }});
+                fetch('/admin/create-user', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: userId})
+                })
+                .then(r => r.json())
+                .then(result => {
+                    alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
+                    loadUsers();
+                });
+            }
+
+            // Загружаем пользователей при открытии
+            loadUsers();
         </script>
     </body>
     </html>
     """
 
-@app.route('/admin/change-password', methods=['GET', 'POST'])
-@admin_required
-def change_password():
-    if request.method == 'POST':
-        new_password = request.form.get('new_password')
-        if new_password and len(new_password) >= 6:
-            admin_data['password_hash'] = hashlib.sha256(new_password.encode()).hexdigest()
-            admin_data['is_default'] = False
-            save_admin()
-            return """
-            <html>
-            <head>
-                <style>
-                    body { font-family: Arial; margin: 40px; background: #f5f5f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
-                    .message { background: white; padding: 40px; border-radius: 10px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-                    .btn { background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; margin: 10px; }
-                </style>
-            </head>
-            <body>
-                <div class="message">
-                    <h2>✅ Пароль успешно изменен!</h2>
-                    <p>Новые учетные данные сохранены.</p>
-                    <a href="/admin" class="btn">В админку</a>
-                    <a href="/admin/logout" class="btn" style="background: #e74c3c;">Выйти и войти заново</a>
-                </div>
-            </body>
-            </html>
-            """
-        else:
-            return """
-            <html>
-            <body style="font-family: Arial; margin: 40px;">
-                <h2>❌ Пароль должен быть не менее 6 символов</h2>
-                <a href="/admin/change-password">← Назад</a>
-            </body>
-            </html>
-            """
-    
-    return """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Смена пароля</title>
-        <meta charset="UTF-8">
-        <style>
-            body { font-family: Arial; margin: 0; padding: 20px; background: #f5f5f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-            .form-box { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 400px; width: 100%; }
-            input { width: 100%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; }
-            button { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; margin: 10px 0; }
-            .btn-back { background: #3498db; }
-        </style>
-    </head>
-    <body>
-        <div class="form-box">
-            <h2>🔐 Смена пароля админа</h2>
-            <form method="POST">
-                <input type="password" name="new_password" placeholder="Новый пароль (мин. 6 символов)" required>
-                <button type="submit">💾 Сохранить новый пароль</button>
-            </form>
-            <a href="/admin" class="btn-back" style="display: block; text-align: center; padding: 10px; background: #3498db; color: white; text-decoration: none; border-radius: 5px; margin-top: 10px;">← Назад в админку</a>
-        </div>
-    </body>
-    </html>
-    """
-
-# Админские API
-@app.route('/admin/users')
-@admin_required
-def get_users_api():
+@app.route('/admin/users', methods=['GET'])
+def get_all_users():
+    """Получить всех пользователей"""
     return jsonify(users_db)
 
 @app.route('/admin/set-plan', methods=['POST'])
-@admin_required
 def admin_set_plan():
+    """Установить тариф пользователю"""
     try:
         data = request.json
-        user_id = data.get('user_id')
+        user_id = data.get('user_id', 'default')
         plan = data.get('plan')
         
-        if not user_id or user_id not in users_db:
+        if user_id not in users_db:
             return jsonify({'success': False, 'error': 'Пользователь не найден'})
         
         if plan not in PLANS:
             return jsonify({'success': False, 'error': 'Неверный тариф'})
         
+        # Обновляем тариф
         users_db[user_id]['plan'] = plan
         users_db[user_id]['used_today'] = 0
-        save_users()
         
         return jsonify({
             'success': True,
@@ -966,44 +731,30 @@ def admin_set_plan():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-@app.route('/admin/reset-all-limits', methods=['POST'])
-@admin_required
-def reset_all_limits():
+@app.route('/admin/create-user', methods=['POST'])
+def admin_create_user():
+    """Создать нового пользователя"""
     try:
-        for user_id in users_db:
-            users_db[user_id]['used_today'] = 0
-            users_db[user_id]['last_reset'] = date.today().isoformat()
+        data = request.json
+        user_id = data.get('user_id')
         
-        save_users()
+        if not user_id:
+            return jsonify({'success': False, 'error': 'Укажите ID пользователя'})
         
-        return jsonify({
-            'success': True,
-            'message': f'Лимиты сброшены для {len(users_db)} пользователей'
-        })
+        if user_id in users_db:
+            return jsonify({'success': False, 'error': 'Пользователь уже существует'})
         
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/admin/create-test-user', methods=['POST'])
-@admin_required
-def create_test_user():
-    try:
-        user_id = f"test_{uuid.uuid4().hex[:8]}"
+        # Создаем пользователя
         users_db[user_id] = {
             'plan': 'free',
             'used_today': 0,
             'last_reset': date.today().isoformat(),
-            'total_used': 0,
-            'created_at': datetime.now().isoformat(),
-            'last_activity': datetime.now().isoformat(),
-            'user_agent': 'Test User',
-            'ip_address': '127.0.0.1'
+            'total_used': 0
         }
-        save_users()
         
         return jsonify({
             'success': True,
-            'message': f'Тестовый пользователь {user_id} создан'
+            'message': f'Пользователь {user_id} создан с бесплатным тарифом'
         })
         
     except Exception as e:
@@ -1011,16 +762,11 @@ def create_test_user():
 
 if __name__ == '__main__':
     print("🚀 DocScan Server запущен!")
-    print("🤖 YandexGPT: Активен") 
-    print("📄 Поддержка PDF/DOCX/TXT: Включена")
-    print("💰 Бесплатный лимит: 1 анализ в день")
-    print("💎 Платные тарифы: 199₽, 399₽, 800₽")
-    print("👥 Загружено пользователей:", len(users_db))
-    print("🔐 Админ-панель защищена паролем")
-    print("⚠️  Временные учетные данные админа:")
-    print("   👤 Логин: admin")
-    print("   🔑 Пароль: admin123")
-    print("   🚨 Смените пароль в админке!")
+    print("🤖 YandexGPT: Активен")
+    print("📄 PDF отчеты: Отключены")
+    print("💰 Бесплатный лимит: 1 анализ в день")  # ОБНОВИЛОСЬ
+    print("💎 Платные тарифы: 199₽, 399₽, 800₽")  # ДОБАВИЛОСЬ
     
+    # Для продакшена на Render
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
