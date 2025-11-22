@@ -1433,7 +1433,6 @@ def create_payment():
 @app.route('/payment-success')
 def payment_success():
     """Страница успешной оплаты"""
-    # Показываем простую страницу успеха
     return """
     <!DOCTYPE html>
     <html>
@@ -1465,29 +1464,6 @@ def payment_success():
     </html>
     """
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Платеж успешен - DocScan</title>
-    <style>
-        body { font-family: Arial; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .container { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; }
-        .success-icon { font-size: 4em; color: #48bb78; margin-bottom: 20px; }
-        .btn { background: #48bb78; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 20px; }
-        .instructions { background: #f0fff4; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left; }
-    </style>
-</head>
-<body>
-        <div class="container">
-            <div class="success-icon">✅</div>
-            <h1>Платеж успешно завершен!</h1>
-            <p>Тариф активирован. Возвращайтесь в приложение.</p>
-            <a href="/" class="btn">Вернуться в DocScan</a>
-        </div>
-    </body>
-    </html>
-    """
-
 @app.route('/payment-webhook', methods=['POST'])
 def payment_webhook():
     """Webhook для уведомлений от ЮMoney (будет настроен позже)"""
@@ -1508,4 +1484,3 @@ if __name__ == '__main__':
     # Для продакшена на Render
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
-    
