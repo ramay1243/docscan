@@ -466,7 +466,7 @@ def home():
                 const file = event.target.files[0];
                 if (!file) return;
                 
-                if (!file.name.match(/\.(pdf|docx|txt)$/)) {
+                if (!file.name.match(/\\.(pdf|docx|txt)$/)) {
                     alert('Пожалуйста, выберите файл в формате PDF, DOCX или TXT');
                     return;
                 }
@@ -780,29 +780,29 @@ def admin_panel():
     session_id = request.cookies.get('admin_session')
     admin_info = admin_sessions.get(session_id, {})
     
-    return f"""
+    return """
     <!DOCTYPE html>
     <html>
     <head>
         <title>Admin Panel - DocScan</title>
         <style>
-            body {{ font-family: Arial; margin: 40px; background: #f7fafc; }}
-            .container {{ max-width: 1200px; margin: 0 auto; }}
-            .header {{ background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-            .user-card {{ background: white; padding: 15px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
-            button {{ background: #667eea; color: white; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; }}
-            button:hover {{ background: #5a67d8; }}
-            .logout-btn {{ background: #e53e3e; }}
-            .logout-btn:hover {{ background: #c53030; }}
-            .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }}
-            .stat-card {{ background: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+            body { font-family: Arial; margin: 40px; background: #f7fafc; }
+            .container { max-width: 1200px; margin: 0 auto; }
+            .header { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .user-card { background: white; padding: 15px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+            button { background: #667eea; color: white; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; }
+            button:hover { background: #5a67d8; }
+            .logout-btn { background: #e53e3e; }
+            .logout-btn:hover { background: #c53030; }
+            .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
+            .stat-card { background: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         </style>
     </head>
     <body>
         <div class="container">
             <div class="header">
                 <h1>🔧 Админ-панель DocScan</h1>
-                <p>Вошел как: <strong>{admin_info.get('username', 'Unknown')}</strong></p>
+                <p>Вошел как: <strong>""" + admin_info.get('username', 'Unknown') + """</strong></p>
                 <button class="logout-btn" onclick="logout()">🚪 Выйти</button>
             </div>
             
@@ -840,103 +840,103 @@ def admin_panel():
         </div>
 
         <script>
-            function logout() {{
+            function logout() {
                 document.cookie = "admin_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                 window.location.href = "/admin-login";
-            }}
+            }
 
             // Загружаем статистику и пользователей
-            function loadStats() {{
+            function loadStats() {
                 fetch('/admin/stats')
                     .then(r => r.json())
-                    .then(stats => {{
+                    .then(stats => {
                         document.getElementById('totalUsers').textContent = stats.total_users;
                         document.getElementById('totalAnalyses').textContent = stats.total_analyses;
                         document.getElementById('todayAnalyses').textContent = stats.today_analyses;
-                    }});
-            }}
+                    });
+            }
 
-            function loadUsers() {{
+            function loadUsers() {
                 fetch('/admin/users')
                     .then(r => r.json())
-                    .then(users => {{
+                    .then(users => {
                         let html = '';
-                        for (const [userId, userData] of Object.entries(users)) {{
+                        for (const [userId, userData] of Object.entries(users)) {
                             html += `
                                 <div class="user-card">
                                     <strong>ID:</strong> ${userId}<br>
-                                    <strong>Тариф:</strong> ${{userData.plan}} (${{getPlanName(userData.plan)}})<br>
-                                    <strong>Использовано сегодня:</strong> ${{userData.used_today}}/${{getPlanLimit(userData.plan)}}<br>
-                                    <strong>Всего анализов:</strong> ${{userData.total_used}}<br>
-                                    <strong>Создан:</strong> ${{userData.created_at || 'Неизвестно'}}<br>
-                                    <button onclick="setUserPlanQuick('${{userId}}', 'basic')">Выдать Базовый</button>
-                                    <button onclick="setUserPlanQuick('${{userId}}', 'premium')">Выдать Премиум</button>
-                                    <button onclick="setUserPlanQuick('${{userId}}', 'unlimited')">Выдать Безлимитный</button>
+                                    <strong>Тариф:</strong> ${userData.plan} (${getPlanName(userData.plan)})<br>
+                                    <strong>Использовано сегодня:</strong> ${userData.used_today}/${getPlanLimit(userData.plan)}<br>
+                                    <strong>Всего анализов:</strong> ${userData.total_used}<br>
+                                    <strong>Создан:</strong> ${userData.created_at || 'Неизвестно'}<br>
+                                    <button onclick="setUserPlanQuick('${userId}', 'basic')">Выдать Базовый</button>
+                                    <button onclick="setUserPlanQuick('${userId}', 'premium')">Выдать Премиум</button>
+                                    <button onclick="setUserPlanQuick('${userId}', 'unlimited')">Выдать Безлимитный</button>
                                 </div>
                             `;
-                        }}
+                        }
                         document.getElementById('usersList').innerHTML = html;
-                    }});
-            }}
+                    });
+            }
 
-            function getPlanName(plan) {{
-                const names = {{free: 'Бесплатный', basic: 'Базовый', premium: 'Премиум', unlimited: 'Безлимитный'}};
+            function getPlanName(plan) {
+                const names = {free: 'Бесплатный', basic: 'Базовый', premium: 'Премиум', unlimited: 'Безлимитный'};
                 return names[plan] || plan;
-            }}
+            }
 
-            function getPlanLimit(plan) {{
-                const limits = {{free: 1, basic: 10, premium: 50, unlimited: 1000}};
+            function getPlanLimit(plan) {
+                const limits = {free: 1, basic: 10, premium: 50, unlimited: 1000};
                 return limits[plan] || 0;
-            }}
+            }
 
-            function setUserPlan() {{
+            function setUserPlan() {
                 const userId = document.getElementById('userId').value;
                 const plan = document.getElementById('planSelect').value;
                 
                 if (!userId) return alert('Введите ID пользователя');
                 
-                fetch('/admin/set-plan', {{
+                fetch('/admin/set-plan', {
                     method: 'POST',
-                    headers: {{'Content-Type': 'application/json'}},
-                    body: JSON.stringify({{user_id: userId, plan: plan}})
-                }})
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: userId, plan: plan})
+                })
                 .then(r => r.json())
-                .then(result => {{
+                .then(result => {
                     alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
                     loadUsers();
                     loadStats();
-                }});
-            }}
+                });
+            }
 
-            function setUserPlanQuick(userId, plan) {{
-                fetch('/admin/set-plan', {{
+            function setUserPlanQuick(userId, plan) {
+                fetch('/admin/set-plan', {
                     method: 'POST',
-                    headers: {{'Content-Type': 'application/json'}},
-                    body: JSON.stringify({{user_id: userId, plan: plan}})
-                }})
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: userId, plan: plan})
+                })
                 .then(r => r.json())
-                .then(result => {{
+                .then(result => {
                     alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
                     loadUsers();
                     loadStats();
-                }});
-            }}
+                });
+            }
 
-            function createUser() {{
+            function createUser() {
                 const userId = document.getElementById('newUserId').value;
                 
-                fetch('/admin/create-user', {{
+                fetch('/admin/create-user', {
                     method: 'POST',
-                    headers: {{'Content-Type': 'application/json'}},
-                    body: JSON.stringify({{user_id: userId}})
-                }})
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: userId})
+                })
                 .then(r => r.json())
-                .then(result => {{
+                .then(result => {
                     alert(result.success ? '✅ ' + result.message : '❌ ' + result.error);
                     loadUsers();
                     loadStats();
-                }});
-            }}
+                });
+            }
 
             // Загружаем при открытии
             loadStats();
