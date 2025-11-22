@@ -440,6 +440,10 @@ def home():
                     .then(data => {
                         document.getElementById('usageInfo').textContent = 
                             `${data.used_today}/${data.daily_limit}`;
+                    })
+                    .catch(error => {
+                        document.getElementById('userId').textContent = currentUserId;
+                        document.getElementById('usageInfo').textContent = '0/1';
                     });
             }
 
