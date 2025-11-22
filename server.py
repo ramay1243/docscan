@@ -411,6 +411,9 @@ def home():
 
             // Загружаем или создаем ID пользователя
             function loadUser() {
+                // ПОКАЗЫВАЕМ ЧТО ИДЕТ ЗАГРУЗКА
+                document.getElementById('userId').textContent = 'Загрузка...';
+                
                 let savedId = localStorage.getItem('docscan_user_id');
                 if (!savedId) {
                     // Создаем нового пользователя
@@ -420,6 +423,8 @@ def home():
                             if (data.success) {
                                 currentUserId = data.user_id;
                                 localStorage.setItem('docscan_user_id', currentUserId);
+                                // СРАЗУ ПОКАЗЫВАЕМ ID
+                                document.getElementById('userId').textContent = currentUserId;
                                 updateUserInfo();
                             }
                         });
