@@ -352,10 +352,14 @@ def home():
     <!DOCTYPE html>
     <html lang="ru">
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>DocScan - Анализ документов за 60 секунд</title>
-        <style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocScan - AI анализ документов и договоров за 60 секунд</title>
+    <meta name="description" content="Бесплатный анализ документов с AI. Проверка договоров на риски, выявление ошибок с помощью YandexGPT. Юридический анализ за 1 минуту">
+    <meta name="keywords" content="анализ документов, проверка договоров, AI анализ, YandexGPT, юридический анализ, анализ рисков, проверка документов">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="DocScan">
+    <style>
             * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
             body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; display: flex; justify-content: center; align-items: center; }
             .container { background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); max-width: 1000px; width: 100%; }
@@ -1095,10 +1099,12 @@ def admin_create_user():
 @app.route('/terms')
 def terms():
     return """
-    <!DOCTYPE html>
+<!DOCTYPE html>
     <html>
     <head>
         <title>Пользовательское соглашение - DocScan</title>
+        <meta name="description" content="Пользовательское соглашение сервиса DocScan. Условия использования AI анализа документов">
+        <meta name="robots" content="index, follow">
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; background: #f7fafc; }
             .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
@@ -1160,6 +1166,8 @@ def privacy():
     <html>
     <head>
         <title>Политика конфиденциальности - DocScan</title>
+        <meta name="description" content="Политика конфиденциальности DocScan. Как мы защищаем ваши данные при анализе документов">
+        <meta name="robots" content="index, follow">
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; background: #f7fafc; }
             .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
@@ -1232,6 +1240,8 @@ def offer():
     <html>
     <head>
         <title>Публичная оферта - DocScan</title>
+        <meta name="description" content="Публичная оферта сервиса DocScan. Тарифы и условия использования AI анализа документов">
+        <meta name="robots" content="index, follow">
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; background: #f7fafc; }
             .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
@@ -1310,6 +1320,45 @@ def offer():
     </body>
     </html>
     """
+    @app.route('/sitemap.xml')
+def sitemap():
+    base_url = "https://docscan-ekjj.onrender.com"
+    return f'''<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>{base_url}/</loc>
+        <lastmod>2024-11-22</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+    <url>
+        <loc>{base_url}/terms</loc>
+        <lastmod>2024-11-22</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>{base_url}/privacy</loc>
+        <lastmod>2024-11-22</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>{base_url}/offer</loc>
+        <lastmod>2024-11-22</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+</urlset>''', 200, {'Content-Type': 'application/xml'}
+
+@app.route('/robots.txt')
+def robots():
+    return """User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin-login
+
+Sitemap: https://docscan-ekjj.onrender.com/sitemap.xml""", 200, {'Content-Type': 'text/plain'}
 
 if __name__ == '__main__':
     print("🚀 DocScan Server запущен!")
