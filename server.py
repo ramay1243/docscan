@@ -401,22 +401,6 @@ def home():
                     </div>
                 </div>
             </div>
-        </div>  <!-- закрывающий div для .container -->
-
-        <!-- ФУТЕР -->
-        <div style="width: 100%; text-align: center; padding: 30px 0; color: #718096; border-top: 1px solid #e2e8f0; margin-top: 50px; background: white;">
-            <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
-                <div style="margin-bottom: 15px;">
-                    <a href="/terms" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Пользовательское соглашение</a>
-                    <a href="/privacy" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Политика конфиденциальности</a>
-                    <a href="/offer" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Публичная оферта</a>
-                    <a href="mailto:support@docscan.example.com" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Техподдержка</a>
-                </div>
-                <div style="font-size: 14px;">
-                    © 2024 DocScan. Все права защищены.
-                </div>
-            </div>
-        </div>
 
         <script>
             let selectedFile = null;
@@ -576,6 +560,19 @@ def home():
             // Загружаем пользователя при старте
             loadUser();
         </script>
+
+        <!-- ФУТЕР -->
+        <div style="position: fixed; bottom: 0; left: 0; width: 100%; text-align: center; padding: 20px 0; color: #718096; border-top: 1px solid #e2e8f0; background: white; z-index: 1000;">
+            <div style="margin-bottom: 10px;">
+                <a href="/terms" style="color: #718096; text-decoration: none; margin: 0 10px; font-size: 12px;">Пользовательское соглашение</a>
+                <a href="/privacy" style="color: #718096; text-decoration: none; margin: 0 10px; font-size: 12px;">Политика конфиденциальности</a>
+                <a href="/offer" style="color: #718096; text-decoration: none; margin: 0 10px; font-size: 12px;">Публичная оферта</a>
+                <a href="mailto:support@docscan.example.com" style="color: #718096; text-decoration: none; margin: 0 10px; font-size: 12px;">Техподдержка</a>
+            </div>
+            <div style="font-size: 12px;">
+                © 2024 DocScan. Все права защищены.
+            </div>
+        </div>
 
     </body>
 </html>
