@@ -401,19 +401,14 @@ def home():
                     </div>
                 </div>
             </div>
-    
+        </div>
 
-        <script>
-            let selectedFile = null;
         <script>
             let selectedFile = null;
             let currentUserId = null;
 
             // Загружаем или создаем ID пользователя
             function loadUser() {
-                // ПОКАЗЫВАЕМ ЧТО ИДЕТ ЗАГРУЗКА
-                document.getElementById('userId').textContent = 'Загрузка...';
-                
                 let savedId = localStorage.getItem('docscan_user_id');
                 if (!savedId) {
                     // Создаем нового пользователя
@@ -423,8 +418,6 @@ def home():
                             if (data.success) {
                                 currentUserId = data.user_id;
                                 localStorage.setItem('docscan_user_id', currentUserId);
-                                // СРАЗУ ПОКАЗЫВАЕМ ID
-                                document.getElementById('userId').textContent = currentUserId;
                                 updateUserInfo();
                             }
                         });
@@ -445,10 +438,6 @@ def home():
                     .then(data => {
                         document.getElementById('usageInfo').textContent = 
                             `${data.used_today}/${data.daily_limit}`;
-                    })
-                    .catch(error => {
-                        document.getElementById('userId').textContent = currentUserId;
-                        document.getElementById('usageInfo').textContent = '0/1';
                     });
             }
 
@@ -571,25 +560,9 @@ def home():
 
             // Загружаем пользователя при старте
             loadUser();
-       </script>
-
-        <!-- ФУТЕР -->
-        <div style="width: 100%; text-align: center; padding: 30px 0; color: #718096; border-top: 1px solid #e2e8f0; margin-top: 50px; background: white;">
-            <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
-                <div style="margin-bottom: 15px;">
-                    <a href="/terms" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Пользовательское соглашение</a>
-                    <a href="/privacy" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Политика конфиденциальности</a>
-                    <a href="/offer" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Публичная оферта</a>
-                    <a href="mailto:support@docscan.example.com" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Техподдержка</a>
-                </div>
-                <div style="font-size: 14px;">
-                    © 2024 DocScan. Все права защищены.
-                </div>
-            </div>
-        </div>
-
+        </script>
     </body>
-</html>
+    </html>
     """
 
 # Добавляем endpoint для создания пользователя
@@ -1057,42 +1030,6 @@ def admin_create_user():
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
-# Страницы для футера
-@app.route('/terms')
-def terms():
-    return """
-    <html>
-    <body style="font-family: Arial; margin: 40px;">
-        <a href="/">← Назад на главную</a>
-        <h1>Пользовательское соглашение</h1>
-        <p>Текст соглашения будет здесь...</p>
-    </body>
-    </html>
-    """
-
-@app.route('/privacy') 
-def privacy():
-    return """
-    <html>
-    <body style="font-family: Arial; margin: 40px;">
-        <a href="/">← Назад на главную</a>
-        <h1>Политика конфиденциальности</h1>
-        <p>Текст политики будет здесь...</p>
-    </body>
-    </html>
-    """
-
-@app.route('/offer')
-def offer():
-    return """
-    <html>
-    <body style="font-family: Arial; margin: 40px;">
-        <a href="/">← Назад на главную</a>
-        <h1>Публичная оферта</h1>
-        <p>Текст оферты будет здесь...</p>
-    </body>
-    </html>
-    """
 
 if __name__ == '__main__':
     print("🚀 DocScan Server запущен!")
