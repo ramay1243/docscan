@@ -1320,7 +1320,7 @@ def offer():
     </body>
     </html>
     """
-    @app.route('/sitemap.xml')
+@app.route('/sitemap.xml')
 def sitemap():
     base_url = "https://docscan-ekjj.onrender.com"
     return f'''<?xml version="1.0" encoding="UTF-8"?>
