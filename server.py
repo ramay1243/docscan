@@ -9,6 +9,7 @@ import uuid
 from datetime import datetime, date
 import secrets
 from functools import wraps
+import json
 
 app = Flask(__name__)
 # Добавляем секретный ключ для сессий
@@ -26,15 +27,54 @@ YANDEX_API_KEY = os.getenv('YANDEX_API_KEY')
 YANDEX_FOLDER_ID = os.getenv('YANDEX_FOLDER_ID')
 
 # Система пользователей и лимитов
-users_db = {
-    'default': {
-        'plan': 'free',
-        'used_today': 0,
-        'last_reset': date.today().isoformat(),
-        'total_used': 0,
-        'user_id': 'default'  # Добавляем явное поле ID
+# Файл для хранения пользователей (на Render используем /tmp)
+USER_DB_FILE = '/tmp/docscan_users.json'
+
+def load_users():
+    """Загружает пользователей из файла"""
+    try:
+        if os.path.exists(USER_DB_FILE):
+            with open(USER_DB_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                print(f"✅ Загружено {len(data)} пользователей из файла")
+                
+                # Восстанавливаем даты и сбрасываем лимиты если нужно
+                for user_id, user_data in data.items():
+                    if user_data['last_reset'] < date.today().isoformat():
+                        user_data['used_today'] = 0
+                        user_data['last_reset'] = date.today().isoformat()
+                        print(f"🔄 Сброшен лимит для пользователя {user_id}")
+                
+                return data
+    except Exception as e:
+        print(f"❌ Ошибка загрузки пользователей: {e}")
+    
+    # База по умолчанию если файла нет
+    default_db = {
+        'default': {
+            'plan': 'free',
+            'used_today': 0,
+            'last_reset': date.today().isoformat(),
+            'total_used': 0,
+            'user_id': 'default',
+            'created_at': datetime.now().isoformat()
+        }
     }
-}
+    print("✅ Создана база по умолчанию")
+    return default_db
+
+def save_users():
+    """Сохраняет пользователей в файл"""
+    try:
+        with open(USER_DB_FILE, 'w', encoding='utf-8') as f:
+            json.dump(users_db, f, ensure_ascii=False, indent=2)
+        print(f"💾 Сохранено {len(users_db)} пользователей")
+    except Exception as e:
+        print(f"❌ Ошибка сохранения пользователей: {e}")
+
+# Загружаем базу при старте сервера
+users_db = load_users()
+print(f"🚀 Сервер запущен. Всего пользователей: {len(users_db)}")
 
 # Добавляем администраторов
 ADMINS = {
@@ -80,18 +120,19 @@ def generate_user_id():
 def get_user(user_id=None):
     """Получает или создает пользователя"""
     if not user_id:
-        # Создаем нового пользователя если ID не передан
         user_id = generate_user_id()
     
     if user_id not in users_db:
         users_db[user_id] = {
-            'user_id': user_id,  # Сохраняем ID
+            'user_id': user_id,
             'plan': 'free',
             'used_today': 0,
             'last_reset': date.today().isoformat(),
             'total_used': 0,
             'created_at': datetime.now().isoformat()
         }
+        save_users()  # Сохраняем при создании нового
+        print(f"👤 Создан новый пользователь: {user_id}")
     
     user = users_db[user_id]
     
@@ -99,6 +140,8 @@ def get_user(user_id=None):
     if user['last_reset'] < date.today().isoformat():
         user['used_today'] = 0
         user['last_reset'] = date.today().isoformat()
+        save_users()  # Сохраняем при сбросе лимита
+        print(f"🔄 Сброшен дневной лимит для {user_id}")
     
     return user
 
@@ -112,6 +155,8 @@ def record_usage(user_id='default'):
     user = get_user(user_id)
     user['used_today'] += 1
     user['total_used'] += 1
+    save_users()  # Сохраняем при каждом использовании
+    print(f"📊 Записан анализ для {user_id}. Сегодня: {user['used_today']}, Всего: {user['total_used']}")
 
 # Функции анализа документов
 def extract_text_from_pdf(file_path):
