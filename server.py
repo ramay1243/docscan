@@ -125,35 +125,50 @@ def save_ip_limits():
 
 # Загружаем IP лимиты при старте
 ip_limits = load_ip_limits()
+def get_client_ip():
+    """Получаем реальный IP клиента на Render"""
+    if request.headers.get('X-Forwarded-For'):
+        # На Render используем этот заголовок
+        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    elif request.headers.get('X-Real-IP'):
+        return request.headers.get('X-Real-IP')
+    else:
+        return request.remote_addr
 
 def can_analyze_by_ip(ip_address):
-    """Проверяет может ли IP-адрес сделать БЕСПЛАТНЫЙ анализ"""
+    """Исправленная проверка по IP"""
+    # Получаем реальный IP
+    real_ip = get_client_ip()
+    print(f"🔍 IP клиента: {real_ip}")
+    
     # Исключаем локальные IP для тестирования
-    if ip_address in ['127.0.0.1', 'localhost']:
+    if real_ip in ['127.0.0.1', 'localhost']:
+        print("✅ Локальный IP - пропускаем проверку")
         return True
         
-    if ip_address not in ip_limits:
-        ip_limits[ip_address] = {
+    if real_ip not in ip_limits:
+        ip_limits[real_ip] = {
             'used_today': 0,
             'last_reset': date.today().isoformat(),
             'first_seen': datetime.now().isoformat()
         }
+        print(f"➕ Новый IP добавлен: {real_ip}")
     
-    ip_data = ip_limits[ip_address]
+    ip_data = ip_limits[real_ip]
     
     # Сбрасываем лимит если новый день
     if ip_data['last_reset'] < date.today().isoformat():
         ip_data['used_today'] = 0
         ip_data['last_reset'] = date.today().isoformat()
-        print(f"🔄 Сброшен лимит для IP {ip_address}")
+        print(f"🔄 Сброшен лимит для IP {real_ip}")
     
     # МАКСИМУМ 1 БЕСПЛАТНЫЙ АНАЛИЗ В ДЕНЬ С ОДНОГО IP
     can_analyze = ip_data['used_today'] < 1
     
     if can_analyze:
-        print(f"📡 IP {ip_address} может сделать анализ ({ip_data['used_today']}/1)")
+        print(f"📡 IP {real_ip} может сделать анализ ({ip_data['used_today']}/1)")
     else:
-        print(f"🚫 IP {ip_address} уже использовал бесплатный анализ сегодня ({ip_data['used_today']}/1)")
+        print(f"🚫 IP {real_ip} уже использовал бесплатный анализ сегодня ({ip_data['used_today']}/1)")
     
     return can_analyze
 app = Flask(__name__)
@@ -306,41 +321,45 @@ def can_analyze(user_id='default'):
             user['plan_expires'] = None
             save_users()
     
-    # ПРОВЕРКА ПО IP - ТОЛЬКО ДЛЯ БЕСПЛАТНЫХ - ДОБАВИЛИ
+    # ПРОВЕРКА ПО IP - ТОЛЬКО ДЛЯ БЕСПЛАТНЫХ
     if user['plan'] == 'free':
-        user_ip = request.remote_addr
-        if not can_analyze_by_ip(user_ip):
-            return False
+        real_ip = get_client_ip()  # Используем исправленную функцию
+            print(f"🔍 Проверка IP лимита для {real_ip}")
+        if not can_analyze_by_ip(real_ip):  # Передаем правильный IP
+            print(f"🚫 IP {real_ip} превысил лимит")
+    return False
     
-    return user['used_today'] < PLANS[user['plan']]['daily_limit']
+    can_user_analyze = user['used_today'] < PLANS[user['plan']]['daily_limit']
+    print(f"🔍 Результат проверки: {can_user_analyze} (использовано {user['used_today']} из {PLANS[user['plan']]['daily_limit']})")
+    return can_user_analyze
 def record_usage(user_id='default'):
     """Записывает использование для пользователя и IP"""
     user = get_user(user_id)
     user['used_today'] += 1
     user['total_used'] += 1
     
-    # 🔽 ДОБАВЛЯЕМ ЗАПИСЬ ДЛЯ IP ДЛЯ БЕСПЛАТНЫХ ПОЛЬЗОВАТЕЛЕЙ 🔽
+    # 🔽 ИСПРАВЛЕННАЯ ЗАПИСЬ ДЛЯ IP 🔽
     if user['plan'] == 'free':
-        user_ip = request.remote_addr
-        if user_ip not in ip_limits:
-            ip_limits[user_ip] = {
+        real_ip = get_client_ip()  # Используем правильный IP
+        
+        if real_ip not in ip_limits:
+            ip_limits[real_ip] = {
                 'used_today': 0,
                 'last_reset': date.today().isoformat(),
                 'first_seen': datetime.now().isoformat()
             }
         
         # Сбрасываем лимит IP если новый день
-        if ip_limits[user_ip]['last_reset'] < date.today().isoformat():
-            ip_limits[user_ip]['used_today'] = 0
-            ip_limits[user_ip]['last_reset'] = date.today().isoformat()
+        if ip_limits[real_ip]['last_reset'] < date.today().isoformat():
+            ip_limits[real_ip]['used_today'] = 0
+            ip_limits[real_ip]['last_reset'] = date.today().isoformat()
         
-        ip_limits[user_ip]['used_today'] += 1
+        ip_limits[real_ip]['used_today'] += 1
         save_ip_limits()
-        print(f"📡 Записано использование для IP {user_ip}: {ip_limits[user_ip]['used_today']}/1")
+        print(f"📡 Записано использование для IP {real_ip}: {ip_limits[real_ip]['used_today']}/1")
     
     save_users()
     print(f"📊 Записан анализ для {user_id}. Сегодня: {user['used_today']}, Всего: {user['total_used']}")
-
 # Функции анализа документов
 def extract_text_from_pdf(file_path):
     text = ""
@@ -2456,6 +2475,16 @@ def yoomoney_test_webhook():
     print(f"📨 JSON data: {request.json}")
     
     return jsonify({'success': True, 'message': 'Тестовый webhook получен'})
+
+@app.route('/debug-ip')
+def debug_ip():
+    """Эндпоинт для отладки IP"""
+    return jsonify({
+        'remote_addr': request.remote_addr,
+        'x_forwarded_for': request.headers.get('X-Forwarded-For'),
+        'x_real_ip': request.headers.get('X-Real-IP'),
+        'real_ip_detected': get_client_ip()
+    })
 
 if __name__ == '__main__':
     print("🚀 DocScan Server запущен!")
