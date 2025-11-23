@@ -425,7 +425,7 @@
                 const formData = new FormData();
                 formData.append('file', selectedFile);
 
-                const response = await fetch('http://localhost:5000/analyze', {
+                const response = await fetch('/analyze', {
                     method: 'POST',
                     body: formData
                 });
@@ -508,7 +508,7 @@
         // Загрузка информации об использовании
         async function loadUsageInfo() {
             try {
-                const response = await fetch('http://localhost:5000/usage');
+                const response = await fetch('/usage');
                 const data = await response.json();
                 
                 usageText.textContent = `${data.used_today}/${data.daily_limit} анализов сегодня (${data.plan_name})`;
@@ -532,4 +532,5 @@
 </body>
 
 </html>
+
 
