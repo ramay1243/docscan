@@ -755,9 +755,9 @@ def home():
             }
         }
     </script>
-            <!-- How it Works Section -->
+                        <!-- How it Works Section -->
             <div style="background: white; padding: 80px 0;">
-                <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
+                <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px; text-align: center;">
                     <h2 style="text-align: center; font-size: 2.5em; margin-bottom: 60px; color: #2d3748;">Как это работает?</h2>
                     <div class="steps">
                         <div class="step">
@@ -804,35 +804,6 @@ def home():
                 </div>
             </div>
 
-            <!-- Pricing Section -->
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 80px 0;">
-                <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
-                    <h2 style="text-align: center; color: white; font-size: 2.5em; margin-bottom: 60px;">Выберите тариф</h2>
-                    <div class="pricing-grid">
-                        <div class="pricing-card">
-                            <div class="plan-name">Бесплатный</div>
-                            <div class="price">0₽</div>
-                            <ul class="features">
-                                <li>✅ 1 анализ в день</li>
-                                <li>✅ AI-анализ YandexGPT</li>
-                                <li>✅ Все форматы файлов</li>
-                            </ul>
-                            <button class="btn" disabled style="background: #a0aec0;">Текущий тариф</button>
-                        </div>
-                        
-                        <div class="pricing-card featured">
-                            <div class="plan-name">Базовый</div>
-                            <div class="price">199₽/мес</div>
-                            <ul class="features">
-                                <li>🚀 10 анализов в день</li>
-                                <li>🚀 Приоритетный AI-анализ</li>
-                                <li>🚀 Все форматы файлов</li>
-                            </ul>
-                            <button class="btn" onclick="buyPlan('basic')">Купить за 199₽</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         <!-- ФУТЕР -->
         <div style="width: 100%; text-align: center; padding: 30px 0; color: #718096; border-top: 1px solid #e2e8f0; margin-top: 50px; background: white;">
             <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
