@@ -1071,7 +1071,7 @@ def analyze_document():
         # Записываем использование
         record_usage(user_id)
         
-        # Добавляем информацию о лимитах в ответ
+                # Добавляем информацию о лимитах в ответ
         user = get_user(user_id)
         plan = PLANS[user['plan']]
         analysis_result['usage_info'] = {
@@ -1081,13 +1081,13 @@ def analyze_document():
             'remaining': plan['daily_limit'] - user['used_today']
         }
         
-            return jsonify({
-        'success': True,
-        'filename': file.filename,
-        'user_id': user_id,
-        'result': analysis_result
-    })
-    
+        return jsonify({
+            'success': True,
+            'filename': file.filename,
+            'user_id': user_id,
+            'result': analysis_result
+        })
+
 finally:
     # Удаляем временный файл
     try:
