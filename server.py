@@ -973,19 +973,19 @@ def analyze_document():
         temp_path = os.path.join(tempfile.gettempdir(), f"{uuid.uuid4()}_{file.filename}")
         file.save(temp_path)
         
-        try:
-# Извлекаем текст
-if file.filename.lower().endswith('.pdf'):
-    text = extract_text_from_pdf(temp_path)
-elif file.filename.lower().endswith('.docx'):
-    text = extract_text_from_docx(temp_path)
-elif file.filename.lower().endswith('.txt'):
-    with open(temp_path, 'r', encoding='utf-8') as f:
-        text = f.read()
-elif file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
-    return jsonify({'error': '📸 Фото загружено! Но распознавание текста с фото пока не настроено. Используйте PDF, DOCX или TXT.'}), 400
-else:
-    return jsonify({'error': 'Неподдерживаемый формат файла'}), 400
+try:
+    # Извлекаем текст
+    if file.filename.lower().endswith('.pdf'):
+        text = extract_text_from_pdf(temp_path)
+    elif file.filename.lower().endswith('.docx'):
+        text = extract_text_from_docx(temp_path)
+    elif file.filename.lower().endswith('.txt'):
+        with open(temp_path, 'r', encoding='utf-8') as f:
+            text = f.read()
+    elif file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
+        return jsonify({'error': '📸 Фото загружено! Но распознавание текста с фото пока не настроено. Используйте PDF, DOCX или TXT.'}), 400
+    else:
+        return jsonify({'error': 'Неподдерживаемый формат файла'}), 400
             
             # Проверяем что текст извлекся
             if not text or len(text.strip()) < 10:
