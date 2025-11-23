@@ -303,7 +303,7 @@ def extract_text_from_image(file_path):
             }]
         }
         
-        print(f"📨 Отправляем запрос в Vision API...")
+        #print(f"📨 Отправляем запрос в Vision API...")
         response = requests.post(
             "https://vision.api.cloud.yandex.net/vision/v1/batchAnalyze",
             headers=headers,
@@ -311,11 +311,11 @@ def extract_text_from_image(file_path):
             timeout=30
         )
         
-        print(f"📊 Ответ API: статус {response.status_code}")
+       # print(f"📊 Ответ API: статус {response.status_code}")
         
         if response.status_code == 200:
             result = response.json()
-            print(f"📄 Полный ответ API: {json.dumps(result, indent=2, ensure_ascii=False)}")
+            #print(f"📄 Полный ответ API: {json.dumps(result, indent=2, ensure_ascii=False)}")
             
             # Проверяем наличие textDetection в ответе
             if ('results' in result and len(result['results']) > 0 and
