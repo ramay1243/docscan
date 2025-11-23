@@ -503,12 +503,15 @@ def home():
         </style>
     </head>
     <body>
-        <div class="container">
-            <div class="header">
-                <div class="logo">🔍</div>
-                <h1>DocScan</h1>
-                <p class="subtitle">Понять суть документа за 60 секунд</p>
-            </div>
+<div class="container">
+    <div class="header">
+        <div class="logo">🔍</div>
+        <h1>DocScan - AI анализ документов</h1>
+        <p class="subtitle" style="font-size: 1.3em; line-height: 1.5; max-width: 800px; margin: 20px auto 0 auto;">
+            <strong>Проверяйте договоры, контракты и юридические документы на риски за 60 секунд</strong><br>
+            🤖 YandexGPT анализирует текст и находит скрытые проблемы до того, как они станут дорогостоящими ошибками
+        </p>
+    </div>
 
             <div class="user-info" id="userInfo">
                 <strong>👤 Ваш ID:</strong> <span id="userId">Загрузка...</span><br>
