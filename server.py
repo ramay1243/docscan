@@ -11,6 +11,16 @@ import secrets
 from functools import wraps
 import json
 import base64
+import logging
+import sys
+
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    stream=sys.stdout
+)
+logger = logging.getLogger(__name__)
 
 # Система лимитов по IP
 IP_LIMITS_FILE = '/tmp/docscan_ip_limits.json'
@@ -1044,19 +1054,19 @@ def analyze_document():
         elif file.filename.lower().endswith('.txt'):
             with open(temp_path, 'r', encoding='utf-8') as f:
                 text = f.read()
-        elif file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
+               elif file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
             # ПРОВЕРЯЕМ ТАРИФ - фото только для платных пользователей!
             user = get_user(user_id)
             
-            # ↓↓↓ ДОБАВЬ ЭТИ СТРОКИ ДЛЯ ДИАГНОСТИКИ ↓↓↓
-            print("=" * 50)
-            print(f"🔍 ДЕБАГ: Проверяем тариф пользователя")
-            print(f"🔍 ДЕБАГ: user_id = {user_id}")
-            print(f"🔍 ДЕБАГ: Текущий план = {user['plan']}")
-            print("=" * 50)
+            # ДИАГНОСТИКА - эти строки появятся в логах
+            logger.info("=" * 50)
+            logger.info(f"🔍 ДЕБАГ: Проверяем тариф пользователя")
+            logger.info(f"🔍 ДЕБАГ: user_id = {user_id}")
+            logger.info(f"🔍 ДЕБАГ: Текущий план = {user['plan']}")
+            logger.info("=" * 50)
             
             if user['plan'] == 'free':
-                print(f"❌ ДЕБАГ: ОТКАЗАНО - пользователь на бесплатном тарифе")
+                logger.info(f"❌ ДЕБАГ: ОТКАЗАНО - пользователь на бесплатном тарифе")
                 return jsonify({
                     'success': False,
                     'error': '📸 Распознавание фото доступно только для платных тарифов!',
@@ -1065,12 +1075,11 @@ def analyze_document():
                 }), 402
             
             # Для платных пользователей - распознаем фото
-            print(f"✅ ДЕБАГ: Разрешено - пользователь на платном тарифе")
-            print(f"👤 Пользователь {user_id} (тариф: {user['plan']}) загрузил фото")
+            logger.info(f"✅ ДЕБАГ: Разрешено - пользователь на платном тарифе")
+            logger.info(f"👤 Пользователь {user_id} (тариф: {user['plan']}) загрузил фото")
             text = extract_text_from_image(temp_path)
             if not text or "Ошибка" in text or len(text.strip()) < 10:
                 return jsonify({'error': f'❌ Не удалось распознать текст с фото. Попробуйте более четкое изображение. Ошибка: {text}'}), 400
-
         # Проверяем что текст извлекся
         if not text or len(text.strip()) < 10:
             return jsonify({'error': 'Не удалось извлечь текст из файла'}), 400
@@ -1868,6 +1877,31 @@ def activate_plan(user_id, plan_type='basic'):
     except Exception as e:
         print(f"❌ Ошибка активации тарифа: {e}")
         return {'success': False, 'error': str(e)}
+
+# Endpoint для смены тарифа
+@app.route('/upgrade-plan', methods=['POST'])
+def upgrade_plan():
+    """Обновить тариф пользователя"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', 'default')
+        new_plan = data.get('plan', 'basic')
+        
+        logger.info(f"🔄 СМЕНА ТАРИФА: user_id={user_id}, новый план={new_plan}")
+        
+        user = get_user(user_id)
+        user['plan'] = new_plan
+        
+        logger.info(f"✅ ТАРИФ ИЗМЕНЕН: user_id={user_id}, теперь план={user['plan']}")
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Тариф изменен на {new_plan}',
+            'plan': new_plan
+        })
+    except Exception as e:
+        logger.error(f"❌ Ошибка смены тарифа: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     print("🚀 DocScan Server запущен!")
