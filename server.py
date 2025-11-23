@@ -1060,8 +1060,6 @@ def analyze_document():
     text = extract_text_from_image(temp_path)
     if not text or "Ошибка" in text or len(text.strip()) < 10:
         return jsonify({'error': f'❌ Не удалось распознать текст с фото. Попробуйте более четкое изображение. Ошибка: {text}'}), 400
-        else:
-            return jsonify({'error': 'Неподдерживаемый формат файла'}), 400
 
         # Проверяем что текст извлекся
         if not text or len(text.strip()) < 10:
