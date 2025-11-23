@@ -1019,7 +1019,6 @@ def home():
                 <strong>📊 Анализов сегодня:</strong> <span id="usageInfo">0/1</span><br>
             </div>
 
-            <!-- 🔽 ДОБАВЬ ЭТОТ БЛОК ПРЯМО СЮДА 🔽 -->
             <div id="accountSection" style="background: #f0f8ff; padding: 15px; border-radius: 10px; margin: 20px 0; border: 1px solid #667eea;">
                 <h4 style="margin: 0 0 10px 0; color: #2d3748;">💾 Восстановить аккаунт</h4>
                 <p style="margin: 0 0 15px 0; color: #4a5568; font-size: 14px;">
@@ -1041,7 +1040,6 @@ def home():
                     </div>
                 </div>
             </div>
-            <!-- 🔼 КОНЕЦ ДОБАВЛЕНИЯ 🔼 -->
 
             <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
                 <div class="upload-icon">📄</div>
@@ -1137,15 +1135,13 @@ def home():
         .then(data => {
             document.getElementById('usageInfo').textContent = 
                 `${data.used_today}/${data.daily_limit}`;
-            
-            // 🔽 ДОБАВЬ ЭТИ СТРОКИ 🔽
+        
             // Показываем блок сохранения только для платных пользователей
             if (data.plan !== 'free') {
                 document.getElementById('saveAccountSection').style.display = 'block';
             } else {
                 document.getElementById('saveAccountSection').style.display = 'none';
             }
-            // 🔼 КОНЕЦ ДОБАВЛЕНИЯ 🔼
         });
 }
 
@@ -1377,6 +1373,57 @@ function getRiskMeterWidth(riskLevel) {
     return levels[riskLevel] || 50;
 }
 
+// Функция восстановления аккаунта
+function restoreAccount() {
+    const email = prompt('Введите email вашего аккаунта:');
+    if (email) {
+        fetch('/get-user-by-email', {
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email: email})
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                currentUserId = data.user_id;
+                localStorage.setItem('docscan_user_id', currentUserId);
+                updateUserInfo();
+                alert('✅ Аккаунт восстановлен! Теперь у вас доступ к вашему тарифу на этом устройстве.');
+            } else {
+                alert('❌ Аккаунт не найден. Убедитесь что:\n• Email введен правильно\n• Вы сохраняли аккаунт на другом устройстве\n• У вас был платный тариф');
+            }
+        }).catch(error => {
+            alert('❌ Ошибка соединения: ' + error.message);
+        });
+    }
+}
+
+// Функция сохранения аккаунта
+function saveAccount() {
+    const email = document.getElementById('userEmail').value;
+    if (!email) {
+        alert('Введите email');
+        return;
+    }
+    
+    if (!email.includes('@') || !email.includes('.')) {
+        alert('Введите корректный email адрес');
+        return;
+    }
+    
+    fetch('/save-user-id', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email: email, user_id: currentUserId})
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            alert('✅ Аккаунт сохранен! Теперь вы можете войти по этому email на любом другом устройстве.');
+            document.getElementById('userEmail').value = ''; // Очищаем поле
+        } else {
+            alert('❌ ' + data.error);
+        }
+    }).catch(error => {
+        alert('❌ Ошибка соединения: ' + error.message);
+    });
+}
             // Загружаем пользователя при старте
         loadUser();
 
@@ -1428,7 +1475,6 @@ function getRiskMeterWidth(riskLevel) {
             }
         }
         
-        // 🔽 ДОБАВЬ ЭТОТ КОД ПРЯМО СЮДА 🔽
 
             // Функция восстановления аккаунта
             function restoreAccount() {
@@ -1478,7 +1524,6 @@ function getRiskMeterWidth(riskLevel) {
                 });
             }
 
-            // 🔼 КОНЕЦ ДОБАВЛЕНИЯ 🔼
     </script>
                                               <!-- How it Works Section -->
             <div style="background: white; padding: 80px 0; text-align: center;">
