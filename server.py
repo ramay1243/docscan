@@ -559,7 +559,7 @@ MEDIUM|Умеренный риск|Описание
         error_msg = f"Ошибка соединения: {str(e)}"
         return create_fallback_analysis(document_type, error_msg)
         
-        def parse_smart_analysis(ai_response, document_type):
+def parse_smart_analysis(ai_response, document_type):
     """Парсинг комплексного анализа от AI"""
     doc_config = SMART_ANALYSIS_CONFIG[document_type]
     
