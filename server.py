@@ -973,7 +973,6 @@ def analyze_document():
         temp_path = os.path.join(tempfile.gettempdir(), f"{uuid.uuid4()}_{file.filename}")
         file.save(temp_path)
         
-try:
     # Извлекаем текст
     if file.filename.lower().endswith('.pdf'):
         text = extract_text_from_pdf(temp_path)
