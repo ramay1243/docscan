@@ -1044,7 +1044,7 @@ def analyze_document():
         elif file.filename.lower().endswith('.txt'):
             with open(temp_path, 'r', encoding='utf-8') as f:
                 text = f.read()
-        elif file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
+elif file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
     # ПРОВЕРЯЕМ ТАРИФ - фото только для платных пользователей!
     user = get_user(user_id)
     if user['plan'] == 'free':
