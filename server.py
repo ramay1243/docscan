@@ -324,10 +324,10 @@ def can_analyze(user_id='default'):
     # ПРОВЕРКА ПО IP - ТОЛЬКО ДЛЯ БЕСПЛАТНЫХ
     if user['plan'] == 'free':
         real_ip = get_client_ip()  # Используем исправленную функцию
-            print(f"🔍 Проверка IP лимита для {real_ip}")
+        print(f"🔍 Проверка IP лимита для {real_ip}")
         if not can_analyze_by_ip(real_ip):  # Передаем правильный IP
             print(f"🚫 IP {real_ip} превысил лимит")
-    return False
+            return False
     
     can_user_analyze = user['used_today'] < PLANS[user['plan']]['daily_limit']
     print(f"🔍 Результат проверки: {can_user_analyze} (использовано {user['used_today']} из {PLANS[user['plan']]['daily_limit']})")
