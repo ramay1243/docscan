@@ -389,8 +389,7 @@
         // Обработка выбранного файла
         function handleFileSelection(file) {
             if (!file) return;
-
-            /*
+            
             // Проверка типа файла
             const validTypes = ['application/pdf', 
                               'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
@@ -407,7 +406,6 @@
                 alert('Файл слишком большой. Максимальный размер: 10MB');
                 return;
             }
-            */
 
             selectedFile = file;
             fileName.textContent = file.name;
@@ -534,6 +532,7 @@
 </body>
 
 </html>
+
 
 
 
