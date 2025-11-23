@@ -13,9 +13,6 @@ import json
 import base64
 import logging
 import sys
-# Включение подробного логирования
-import logging
-logging.basicConfig(level=logging.DEBUG)
 
 # 🔧 УМНАЯ СИСТЕМА АНАЛИЗА ДОКУМЕНТОВ - ДОБАВЬТЕ ЭТОТ КОД
 SMART_ANALYSIS_CONFIG = {
@@ -1570,6 +1567,8 @@ def create_user():
 
 @app.route('/analyze', methods=['POST'])
 def analyze_document():
+    real_ip = get_client_ip()
+    print(f"🔍 Анализ запущен для IP: {real_ip}")
     # Получаем user_id из формы или используем default
     user_id = request.form.get('user_id', 'default')
     
@@ -1636,6 +1635,8 @@ def analyze_document():
         
         # Анализируем текст
         analysis_result = analyze_text(text, user_id)
+        
+        print(f"✅ АНАЛИЗ УСПЕШЕН для {user_id}, IP: {real_ip}")
         
         # Записываем использование
         record_usage(user_id)
