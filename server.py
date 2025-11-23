@@ -14,6 +14,75 @@ import base64
 import logging
 import sys
 
+# 🔧 УМНАЯ СИСТЕМА АНАЛИЗА ДОКУМЕНТОВ - ДОБАВЬТЕ ЭТОТ КОД
+SMART_ANALYSIS_CONFIG = {
+    'lease': {
+        'name': 'Договор аренды',
+        'keywords': ['аренд', 'найм', 'лизинг', 'арендодатель', 'арендатор', 'помещен', 'недвижимость'],
+        'expert_areas': ['Недвижимость', 'Гражданское право', 'Финансы']
+    },
+    'employment': {
+        'name': 'Трудовой договор', 
+        'keywords': ['трудовой', 'работодатель', 'работник', 'зарплат', 'отпуск', 'трудовая', 'должность'],
+        'expert_areas': ['Трудовое право', 'HR', 'Соц. гарантии']
+    },
+    'sale': {
+        'name': 'Договор купли-продажи',
+        'keywords': ['купл', 'продаж', 'покупатель', 'продавец', 'товар', 'оплат', 'доставк'],
+        'expert_areas': ['Коммерческое право', 'Логистика', 'Финансы']
+    },
+    'service': {
+        'name': 'Договор оказания услуг',
+        'keywords': ['услуг', 'подряд', 'исполнитель', 'заказчик', 'выполнен', 'срок'],
+        'expert_areas': ['Гражданское право', 'Проектный менеджмент', 'Контроль качества']
+    },
+    'nda': {
+        'name': 'Соглашение о конфиденциальности',
+        'keywords': ['конфиденциальн', 'нда', 'секрет', 'неразглашен', 'коммерческая тайна'],
+        'expert_areas': ['Интеллектуальная собственность', 'Корпоративная безопасность']
+    },
+    'loan': {
+        'name': 'Кредитный договор',
+        'keywords': ['кредит', 'заем', 'займ', 'процент', 'погашен', 'ссуд'],
+        'expert_areas': ['Финансовое право', 'Банковское дело', 'Риск-менеджмент']
+    },
+    'partnership': {
+        'name': 'Договор партнерства', 
+        'keywords': ['партнер', 'совместн', 'сотрудничеств', 'долев', 'участник'],
+        'expert_areas': ['Корпоративное право', 'Стратегическое планирование', 'Финансы']
+    },
+    'general': {
+        'name': 'Общий договор',
+        'keywords': [],
+        'expert_areas': ['Гражданское право', 'Деловые отношения']
+    }
+}
+
+# Уровни риска
+RISK_LEVELS = {
+    'CRITICAL': {'color': '#e53e3e', 'icon': '🔴', 'description': 'Высокий риск потерь'},
+    'HIGH': {'color': '#dd6b20', 'icon': '🟠', 'description': 'Существенный риск'},
+    'MEDIUM': {'color': '#d69e2e', 'icon': '🟡', 'description': 'Умеренный риск'},
+    'LOW': {'color': '#38a169', 'icon': '🟢', 'description': 'Низкий риск'},
+    'INFO': {'color': '#3182ce', 'icon': '🔵', 'description': 'Информация'}
+}
+
+def detect_document_type(text):
+    """Умное определение типа документа по ключевым словам"""
+    text_lower = text.lower()
+    
+    for doc_type, config in SMART_ANALYSIS_CONFIG.items():
+        if doc_type == 'general':
+            continue
+            
+        for keyword in config['keywords']:
+            if keyword in text_lower:
+                print(f"📄 Определен тип документа: {config['name']}")
+                return doc_type
+    
+    print("📄 Документ определен как: Общий договор")
+    return 'general'
+
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
@@ -377,138 +446,387 @@ def parse_fallback_response(ai_response):
     
     return risks, recommendations
 
-def analyze_with_yandexgpt(text):
-    """Анализирует текст с помощью YandexGPT"""
+def analyze_with_yandexgpt(text, document_type='general'):
+    """Умный комплексный анализ документа с расширенной экспертизой"""
     try:
+        doc_config = SMART_ANALYSIS_CONFIG[document_type]
+        
+        # Умный промпт для комплексного анализа
+        system_prompt = f"""Ты - ведущий юридический эксперт с многолетним опытом. Проведи комплексный анализ документа и предоставь развернутую экспертизу:
+
+ЭКСПЕРТНАЯ ОЦЕНКА ДОКУМЕНТА:
+
+1. ЮРИДИЧЕСКАЯ ЭКСПЕРТИЗА:
+- Соответствие законодательству РФ
+- Полнота существенных условий
+- Ясность формулировок
+- Сбалансированность прав сторон
+
+2. ФИНАНСОВЫЙ АНАЛИЗ:
+- Прозрачность финансовых условий
+- Справедливость расчетов
+- Риски финансовых потерь
+
+3. ОПЕРАЦИОННЫЕ РИСКИ:
+- Реализуемость условий на практике
+- Возможности для злоупотреблений
+
+4. СТРАТЕГИЧЕСКАЯ ОЦЕНКА:
+- Соответствие бизнес-целям
+- Гибкость при изменении обстоятельств
+
+Требования к ответу:
+- Будь конкретен и ссылайся на конкретные пункты
+- Оценивай риски по степени критичности
+- Предлагай практические решения
+
+Формат ответа СТРОГО:
+ЮРИДИЧЕСКАЯ ЭКСПЕРТИЗА:
+[оценка соответствия законодательству]
+
+ФИНАНСОВЫЙ АНАЛИЗ: 
+[анализ финансовых условий]
+
+ОПЕРАЦИОННЫЕ РИСКИ:
+[оценка практической реализуемости]
+
+СТРАТЕГИЧЕСКАЯ ОЦЕНКА:
+[соответствие целям]
+
+КЛЮЧЕВЫЕ РИСКИ:
+CRITICAL|Высокий риск|Описание
+HIGH|Существенный риск|Описание  
+MEDIUM|Умеренный риск|Описание
+
+ПРАКТИЧЕСКИЕ РЕКОМЕНДАЦИИ:
+- Конкретное действие|Ожидаемый эффект|Срочность
+- Конкретное действие|Ожидаемый эффект|Срочность
+
+АЛЬТЕРНАТИВНЫЕ РЕШЕНИЯ:
+- Вариант решения|Преимущества|Недостатки
+
+ЭКСПЕРТНОЕ ЗАКЛЮЧЕНИЕ:
+[общая оценка и выводы]"""
+
         headers = {
             "Authorization": f"Api-Key {YANDEX_API_KEY}",
             "Content-Type": "application/json"
         }
         
         data = {
-            "modelUri": f"gpt://{YANDEX_FOLDER_ID}/yandexgpt-lite/latest",
+            "modelUri": f"gpt://{YANDEX_FOLDER_ID}/yandexgpt/latest",
             "completionOptions": {
                 "stream": False,
                 "temperature": 0.1,
-                "maxTokens": 2000
+                "maxTokens": 4000
             },
             "messages": [
                 {
                     "role": "system", 
-                    "text": """Ты опытный юрист-аналитик. Проанализируй документ и выдели ТОЛЬКО:
-1. ПОТЕНЦИАЛЬНЫЕ РИСКИ (конкретные проблемы, что может привести к потерям)
-2. КОНКРЕТНЫЕ РЕКОМЕНДАЦИИ по исправлению
-
-Формат ответа:
-РИСКИ:
-- риск 1
-- риск 2
-
-РЕКОМЕНДАЦИИ:
-- рекомендация 1
-- рекомендация 2
-
-Не добавляй общие оценки безопасности и другие комментарии."""
+                    "text": system_prompt
                 },
                 {
                     "role": "user",
-                    "text": f"Проанализируй этот документ как юрист и выдели только риски и рекомендации:\n\n{text[:8000]}"
+                    "text": f"""Проведи комплексный экспертный анализ этого {doc_config['name']}:
+
+{text[:15000]}
+
+Проанализируй с позиций: {', '.join(doc_config['expert_areas'])}.
+Будь максимально конкретен и практичен в рекомендациях."""
                 }
             ]
         }
         
+        print(f"🧠 Запускаем умный анализ для {doc_config['name']}")
         response = requests.post(
             "https://llm.api.cloud.yandex.net/foundationModels/v1/completion",
             headers=headers,
             json=data,
-            timeout=30
+            timeout=60
         )
         
         if response.status_code == 200:
             result = response.json()
             ai_response = result['result']['alternatives'][0]['message']['text']
             
-            # Улучшенный парсинг ответа
-            lines = [line.strip() for line in ai_response.split('\n') if line.strip()]
-            risks = []
-            recommendations = []
-            
-            current_section = None
-            
-            for line in lines:
-                line_lower = line.lower()
-                
-                # Определяем разделы
-                if any(marker in line_lower for marker in ['риск', 'проблем', 'опасност', 'недостаток', 'слаб']):
-                    current_section = 'risks'
-                    continue
-                elif any(marker in line_lower for marker in ['рекомендац', 'совet', 'улучшен', 'исправлен']):
-                    current_section = 'recommendations'
-                    continue
-                
-                # Пропускаем заголовки и общие фразы
-                if any(phrase in line_lower for phrase in [
-                    'общая оценка', 'документ выглядит', 'безопасн', 'итог', 'заключен'
-                ]):
-                    continue
-                
-                # Добавляем пункты только если они начинаются с маркера списка
-                if line.startswith(('-', '•', '—', '*', '1.', '2.', '3.', '4.', '5.')) and len(line) > 5:
-                    if current_section == 'risks':
-                        risks.append(line.lstrip('-•—*123456789. '))
-                    elif current_section == 'recommendations':
-                        recommendations.append(line.lstrip('-•—*123456789. '))
-            
-            # Если не нашли структурированный ответ, используем эвристический подход
-            if not risks or not recommendations:
-                risks, recommendations = parse_fallback_response(ai_response)
-            
-            # Очистка от дубликатов и пустых строк
-            risks = list(dict.fromkeys([r for r in risks if r and len(r) > 10]))
-            recommendations = list(dict.fromkeys([r for r in recommendations if r and len(r) > 10]))
-            
-            return {
-                'risks': risks if risks else ['✅ Критических рисков не обнаружено'],
-                'warnings': [],
-                'summary': f'🤖 YandexGPT: {len(text)} символов проанализировано',
-                'recommendations': recommendations if recommendations else ['✅ Все рекомендации учтены в документе'],
-                'ai_used': True
-            }
+            print(f"✅ Получен развернутый анализ от YandexGPT")
+            return parse_smart_analysis(ai_response, document_type)
         else:
-            return {
-                'risks': [f'❌ Ошибка YandexGPT: {response.status_code}'],
-                'warnings': [],
-                'summary': 'Ошибка доступа к AI',
-                'recommendations': ['🔄 Используем локальный анализ...'],
-                'ai_used': False
-            }
+            error_msg = f"Ошибка YandexGPT: {response.status_code}"
+            return create_fallback_analysis(document_type, error_msg)
             
     except Exception as e:
-        return {
-            'risks': [f'❌ Ошибка соединения: {str(e)}'],
-            'warnings': [],
-            'summary': 'Нет соединения с AI',
-            'recommendations': ['🔄 Переключаемся на локальный анализ'],
-            'ai_used': False
+        error_msg = f"Ошибка соединения: {str(e)}"
+        return create_fallback_analysis(document_type, error_msg)
+        
+        def parse_smart_analysis(ai_response, document_type):
+    """Парсинг комплексного анализа от AI"""
+    doc_config = SMART_ANALYSIS_CONFIG[document_type]
+    
+    sections = {
+        'legal_expertise': '',
+        'financial_analysis': '', 
+        'operational_risks': '',
+        'strategic_assessment': '',
+        'key_risks': [],
+        'practical_recommendations': [],
+        'alternative_solutions': [],
+        'expert_conclusion': ''
+    }
+    
+    current_section = None
+    lines = [line.strip() for line in ai_response.split('\n') if line.strip()]
+    
+    for line in lines:
+        line_lower = line.lower()
+        
+        # Определяем разделы
+        if 'юридическая экспертиза' in line_lower:
+            current_section = 'legal_expertise'
+            continue
+        elif 'финансовый анализ' in line_lower:
+            current_section = 'financial_analysis'
+            continue
+        elif 'операционные риски' in line_lower:
+            current_section = 'operational_risks'
+            continue
+        elif 'стратегическая оценка' in line_lower:
+            current_section = 'strategic_assessment'
+            continue
+        elif 'ключевые риски' in line_lower:
+            current_section = 'key_risks'
+            continue
+        elif 'практические рекомендации' in line_lower:
+            current_section = 'practical_recommendations'
+            continue
+        elif 'альтернативные решения' in line_lower:
+            current_section = 'alternative_solutions'
+            continue
+        elif 'экспертное заключение' in line_lower:
+            current_section = 'expert_conclusion'
+            continue
+        
+        # Обрабатываем содержимое разделов
+        if current_section:
+            if current_section in ['legal_expertise', 'financial_analysis', 'operational_risks', 
+                                 'strategic_assessment', 'expert_conclusion']:
+                if line and not line.startswith(('CRITICAL', 'HIGH', 'MEDIUM', 'LOW', '-', '•')):
+                    if sections[current_section]:
+                        sections[current_section] += ' ' + line
+                    else:
+                        sections[current_section] = line
+            
+            elif current_section == 'key_risks' and '|' in line:
+                parts = line.split('|')
+                if len(parts) >= 3:
+                    risk_level = parts[0].strip()
+                    risk_title = parts[1].strip()
+                    risk_description = parts[2].strip()
+                    
+                    if risk_level in RISK_LEVELS:
+                        sections['key_risks'].append({
+                            'level': risk_level,
+                            'title': risk_title,
+                            'description': risk_description,
+                            'color': RISK_LEVELS[risk_level]['color'],
+                            'icon': RISK_LEVELS[risk_level]['icon']
+                        })
+            
+            elif current_section == 'practical_recommendations' and '|' in line:
+                parts = line.split('|')
+                if len(parts) >= 3:
+                    sections['practical_recommendations'].append({
+                        'action': parts[0].strip().lstrip('-• '),
+                        'effect': parts[1].strip(),
+                        'urgency': parts[2].strip()
+                    })
+            
+            elif current_section == 'alternative_solutions' and '|' in line:
+                parts = line.split('|')
+                if len(parts) >= 3:
+                    sections['alternative_solutions'].append({
+                        'solution': parts[0].strip().lstrip('-• '),
+                        'advantages': parts[1].strip(),
+                        'disadvantages': parts[2].strip()
+                    })
+    
+    # Создаем итоговый результат
+    return create_smart_analysis_result(sections, document_type)
+
+def create_smart_analysis_result(sections, document_type):
+    """Создает структурированный результат умного анализа"""
+    doc_config = SMART_ANALYSIS_CONFIG[document_type]
+    
+    # Подсчитываем статистику рисков
+    risk_stats = {
+        'CRITICAL': 0,
+        'HIGH': 0, 
+        'MEDIUM': 0,
+        'LOW': 0,
+        'total': len(sections['key_risks'])
+    }
+    
+    for risk in sections['key_risks']:
+        if risk['level'] in risk_stats:
+            risk_stats[risk['level']] += 1
+    
+    # Определяем общий уровень риска документа
+    if risk_stats['CRITICAL'] > 0:
+        overall_risk = 'CRITICAL'
+    elif risk_stats['HIGH'] > 0:
+        overall_risk = 'HIGH' 
+    elif risk_stats['MEDIUM'] > 0:
+        overall_risk = 'MEDIUM'
+    else:
+        overall_risk = 'LOW'
+    
+    return {
+        # Основная информация
+        'document_type': document_type,
+        'document_type_name': doc_config['name'],
+        'expert_areas': doc_config['expert_areas'],
+        'ai_used': True,
+        
+        # Комплексная экспертиза
+        'expert_analysis': {
+            'legal_expertise': sections['legal_expertise'] or 'Юридический анализ не выявил критических нарушений',
+            'financial_analysis': sections['financial_analysis'] or 'Финансовые условия требуют дополнительной проверки',
+            'operational_risks': sections['operational_risks'] or 'Операционные риски находятся в допустимых пределах',
+            'strategic_assessment': sections['strategic_assessment'] or 'Документ соответствует базовым стратегическим целям'
+        },
+        
+        # Детализированные риски
+        'risk_analysis': {
+            'key_risks': sections['key_risks'][:10],
+            'overall_risk_level': overall_risk,
+            'risk_statistics': risk_stats,
+            'risk_summary': f"Выявлено {risk_stats['total']} рисков: {risk_stats['CRITICAL']} критических, {risk_stats['HIGH']} высоких, {risk_stats['MEDIUM']} средних"
+        },
+        
+        # Практические рекомендации
+        'recommendations': {
+            'practical_actions': sections['practical_recommendations'][:8],
+            'alternative_solutions': sections['alternative_solutions'][:5],
+            'priority_actions': [r for r in sections['practical_recommendations'] if 'срочн' in r.get('urgency', '').lower()][:3]
+        },
+        
+        # Визуальная сводка
+        'executive_summary': {
+            'risk_level': overall_risk,
+            'risk_color': RISK_LEVELS[overall_risk]['color'],
+            'risk_icon': RISK_LEVELS[overall_risk]['icon'],
+            'risk_description': RISK_LEVELS[overall_risk]['description'],
+            'quick_facts': [
+                f"Обнаружено {risk_stats['total']} рисков",
+                f"Критических: {risk_stats['CRITICAL']}",
+                f"Высоких: {risk_stats['HIGH']}",
+                f"Требует доработки: {risk_stats['CRITICAL'] + risk_stats['HIGH'] > 0}"
+            ],
+            'decision_support': get_decision_support(overall_risk)
         }
+    }
+
+def get_decision_support(risk_level):
+    """Предоставляет поддержку для принятия решений"""
+    decisions = {
+        'CRITICAL': "НЕ РЕКОМЕНДУЕТСЯ к подписанию. Требуется существенная доработка с юристом.",
+        'HIGH': "Требует серьезной доработки. Консультация с юристом обязательна.",
+        'MEDIUM': "Может быть подписан после устранения основных замечаний.",
+        'LOW': "Может быть подписан. Рекомендуется учесть выявленные рекомендации."
+    }
+    return decisions.get(risk_level, "Требуется дополнительный анализ.")
+
+def create_fallback_analysis(document_type, error_msg):
+    """Создает базовый анализ при ошибках"""
+    doc_config = SMART_ANALYSIS_CONFIG[document_type]
+    
+    return {
+        'document_type': document_type,
+        'document_type_name': doc_config['name'],
+        'expert_areas': doc_config['expert_areas'],
+        'ai_used': False,
+        'expert_analysis': {
+            'legal_expertise': f'Ошибка анализа: {error_msg}',
+            'financial_analysis': 'Анализ недоступен',
+            'operational_risks': 'Анализ недоступен',
+            'strategic_assessment': 'Анализ недоступен'
+        },
+        'risk_analysis': {
+            'key_risks': [{
+                'level': 'INFO',
+                'title': 'Ошибка анализа',
+                'description': error_msg,
+                'color': '#3182ce',
+                'icon': '🔵'
+            }],
+            'overall_risk_level': 'INFO',
+            'risk_statistics': {'total': 1, 'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0},
+            'risk_summary': 'Анализ не выполнен'
+        },
+        'executive_summary': {
+            'risk_level': 'INFO',
+            'risk_color': '#3182ce',
+            'risk_icon': '🔵',
+            'risk_description': 'Ошибка анализа',
+            'quick_facts': ['Анализ не выполнен', 'Попробуйте еще раз'],
+            'decision_support': 'Недостаточно данных для принятия решения'
+        }
+    }
 
 def analyze_text(text, user_id='default'):
-    """Основная функция анализа"""
+    """Умная функция анализа с определением типа документа"""
     user = get_user(user_id)
+    
+    # Определяем тип документа
+    document_type = detect_document_type(text)
+    doc_config = SMART_ANALYSIS_CONFIG[document_type]
+    
+    print(f"🔍 Анализируем документ типа: {doc_config['name']}")
     
     # Проверяем доступ к AI по тарифу
     if PLANS[user['plan']]['ai_access']:
-        result = analyze_with_yandexgpt(text)
+        result = analyze_with_yandexgpt(text, document_type)
         if result['ai_used']:
             return result
     
-    # Если AI недоступен, используем локальный анализ
+    # Если AI недоступен, используем улучшенный локальный анализ
+    return create_basic_analysis(text, document_type)
+
+def create_basic_analysis(text, document_type):
+    """Базовый анализ для случаев когда AI недоступен"""
+    doc_config = SMART_ANALYSIS_CONFIG[document_type]
+    
     return {
-        'risks': ['✅ Базовый анализ завершен'],
-        'warnings': [],
-        'summary': f'📊 Локальный анализ: {len(text)} символов',
-        'recommendations': ['💎 Перейдите на премиум для AI-анализа'],
-        'ai_used': False
+        'document_type': document_type,
+        'document_type_name': doc_config['name'],
+        'expert_areas': doc_config['expert_areas'],
+        'ai_used': False,
+        'expert_analysis': {
+            'legal_expertise': 'Для полного юридического анализа требуется AI-экспертиза',
+            'financial_analysis': 'Активируйте платный тариф для финансового анализа',
+            'operational_risks': 'Расширенный анализ рисков доступен в премиум-версии',
+            'strategic_assessment': 'Стратегическая оценка требует AI-анализа'
+        },
+        'risk_analysis': {
+            'key_risks': [{
+                'level': 'INFO',
+                'title': 'Ограниченный анализ',
+                'description': 'Для полного анализа рисков активируйте платный тариф',
+                'color': '#3182ce',
+                'icon': '🔵'
+            }],
+            'overall_risk_level': 'INFO',
+            'risk_statistics': {'total': 1, 'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0},
+            'risk_summary': 'Требуется расширенный анализ'
+        },
+        'executive_summary': {
+            'risk_level': 'INFO',
+            'risk_color': '#3182ce',
+            'risk_icon': '🔵',
+            'risk_description': 'Требуется расширенный анализ',
+            'quick_facts': ['Доступен только базовый анализ', 'Активируйте платный тариф для полной экспертизы'],
+            'decision_support': 'Рекомендуется провести расширенный анализ перед принятием решения'
+        }
     }
 
 # API endpoints
@@ -583,6 +901,68 @@ def home():
         .faq-answer.open { padding: 20px 25px; max-height: 500px; }
         .faq-icon { font-size: 1.2em; font-weight: bold; transition: transform 0.3s; }
         .faq-item.active .faq-icon { transform: rotate(45deg); }
+        
+        /* Стили для умного анализа */
+.risk-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    margin: 2px;
+}
+
+.risk-critical { background: #fed7d7; color: #c53030; }
+.risk-high { background: #feebc8; color: #dd6b20; }
+.risk-medium { background: #fefcbf; color: #d69e2e; }
+.risk-low { background: #c6f6d5; color: #38a169; }
+.risk-info { background: #bee3f8; color: #3182ce; }
+
+.expert-section {
+    background: white;
+    padding: 20px;
+    margin: 15px 0;
+    border-radius: 12px;
+    border-left: 4px solid #667eea;
+}
+
+.recommendation-card {
+    background: #f0fff4;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border-left: 4px solid #48bb78;
+}
+
+.alternative-card {
+    background: #edf2f7;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border-left: 4px solid #4299e1;
+}
+
+.executive-summary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 25px;
+    border-radius: 15px;
+    margin: 20px 0;
+}
+
+.risk-meter {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    margin: 10px 0;
+    overflow: hidden;
+}
+
+.risk-meter-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
         </style>
     </head>
     <body>
@@ -784,36 +1164,147 @@ def home():
             }
 
             function showResult(data) {
-                const resultDiv = document.getElementById('result');
-                const resultContent = document.getElementById('resultContent');
-                
-                let risksHTML = '';
-                data.result.risks.forEach(risk => {
-                    risksHTML += `<div class="risk-item">${risk}</div>`;
-                });
-                
-                let recommendationsHTML = '';
-                data.result.recommendations.forEach(rec => {
-                    recommendationsHTML += `<div class="success-item">${rec}</div>`;
-                });
-                
-                resultContent.innerHTML = `
-                    <div style="margin-bottom: 20px;">
-                        <strong>📄 Анализ документа:</strong> ${data.filename}
+    const resultDiv = document.getElementById('result');
+    const resultContent = document.getElementById('resultContent');
+    
+    resultContent.innerHTML = createSmartAnalysisHTML(data);
+    resultDiv.style.display = 'block';
+    resultDiv.scrollIntoView({ behavior: 'smooth' });
+}
+
+function createSmartAnalysisHTML(data) {
+    const analysis = data.result;
+    
+    return `
+        <!-- Заголовок и сводка -->
+        <div class="executive-summary">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="margin: 0; color: white;">${analysis.document_type_name}</h3>
+                    <p style="margin: 5px 0; opacity: 0.9;">${analysis.executive_summary.risk_icon} ${analysis.executive_summary.risk_description}</p>
+                </div>
+                <div style="text-align: right;">
+                    <div class="risk-badge risk-${analysis.executive_summary.risk_level.toLowerCase()}" 
+                         style="font-size: 16px; padding: 8px 16px;">
+                        ${analysis.executive_summary.risk_level}
                     </div>
-                    
-                    <div class="summary">
-                        ${data.result.summary}
+                </div>
+            </div>
+            
+            <div class="risk-meter">
+                <div class="risk-meter-fill" style="width: ${getRiskMeterWidth(analysis.executive_summary.risk_level)}%; 
+                     background: ${analysis.executive_summary.risk_color};">
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 15px;">
+                ${analysis.executive_summary.quick_facts.map(fact => 
+                    `<div style="text-align: center; background: rgba(255,255,255,0.2); padding: 8px; border-radius: 6px;">
+                        ${fact}
+                    </div>`
+                ).join('')}
+            </div>
+            
+            <div style="margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                <strong>💡 Решение:</strong> ${analysis.executive_summary.decision_support}
+            </div>
+        </div>
+
+        <!-- Экспертная оценка -->
+        <div class="expert-section">
+            <h4>🧑‍⚖️ Юридическая экспертиза</h4>
+            <p>${analysis.expert_analysis.legal_expertise}</p>
+        </div>
+
+        <div class="expert-section">
+            <h4>💰 Финансовый анализ</h4>
+            <p>${analysis.expert_analysis.financial_analysis}</p>
+        </div>
+
+        <div class="expert-section">
+            <h4>⚙️ Операционные риски</h4>
+            <p>${analysis.expert_analysis.operational_risks}</p>
+        </div>
+
+        <div class="expert-section">
+            <h4>🎯 Стратегическая оценка</h4>
+            <p>${analysis.expert_analysis.strategic_assessment}</p>
+        </div>
+
+        <!-- Детальные риски -->
+        <div class="expert-section">
+            <h4>⚠️ Ключевые риски</h4>
+            <div style="margin: 10px 0;">
+                <strong>Статистика:</strong> ${analysis.risk_analysis.risk_summary}
+            </div>
+            ${analysis.risk_analysis.key_risks.map(risk => `
+                <div style="background: ${risk.color}20; padding: 12px; margin: 8px 0; border-radius: 8px; border-left: 4px solid ${risk.color};">
+                    <div style="display: flex; justify-content: between; align-items: center;">
+                        <span class="risk-badge risk-${risk.level.toLowerCase()}">
+                            ${risk.icon} ${risk.level}
+                        </span>
+                        <strong style="flex-grow: 1; margin-left: 10px;">${risk.title}</strong>
                     </div>
-                    
-                    ${risksHTML ? `<h4 style="margin: 20px 0 10px 0; color: #e53e3e;">⚠️ Выявленные риски:</h4>${risksHTML}` : ''}
-                    
-                    ${recommendationsHTML ? `<h4 style="margin: 20px 0 10px 0; color: #48bb78;">✅ Рекомендации:</h4>${recommendationsHTML}` : ''}
-                `;
-                
-                resultDiv.style.display = 'block';
-                resultDiv.scrollIntoView({ behavior: 'smooth' });
-            }
+                    <p style="margin: 8px 0 0 0; color: #4a5568;">${risk.description}</p>
+                </div>
+            `).join('')}
+        </div>
+
+        <!-- Практические рекомендации -->
+        <div class="expert-section">
+            <h4>✅ Практические рекомендации</h4>
+            ${analysis.recommendations.practical_actions.map(rec => `
+                <div class="recommendation-card">
+                    <div style="display: flex; justify-content: between; margin-bottom: 8px;">
+                        <strong>📝 ${rec.action}</strong>
+                        <span style="background: #48bb78; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">
+                            ${rec.urgency}
+                        </span>
+                    </div>
+                    <p style="margin: 0; color: #2d3748;"><strong>Эффект:</strong> ${rec.effect}</p>
+                </div>
+            `).join('')}
+        </div>
+
+        <!-- Альтернативные решения -->
+        ${analysis.recommendations.alternative_solutions && analysis.recommendations.alternative_solutions.length > 0 ? `
+        <div class="expert-section">
+            <h4>🔄 Альтернативные решения</h4>
+            ${analysis.recommendations.alternative_solutions.map(sol => `
+                <div class="alternative-card">
+                    <strong>💡 ${sol.solution}</strong>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px;">
+                        <div style="background: #c6f6d5; padding: 8px; border-radius: 6px;">
+                            <strong>👍 Преимущества:</strong><br>${sol.advantages}
+                        </div>
+                        <div style="background: #fed7d7; padding: 8px; border-radius: 6px;">
+                            <strong>👎 Недостатки:</strong><br>${sol.disadvantages}
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+        ` : ''}
+
+        <!-- Приоритетные действия -->
+        ${analysis.recommendations.priority_actions && analysis.recommendations.priority_actions.length > 0 ? `
+        <div class="expert-section" style="border-left-color: #e53e3e;">
+            <h4>🚀 Приоритетные действия</h4>
+            ${analysis.recommendations.priority_actions.map(action => `
+                <div style="background: #fed7d7; padding: 12px; margin: 8px 0; border-radius: 8px;">
+                    <strong>🔴 ${action.action}</strong>
+                    <p style="margin: 5px 0 0 0;">${action.effect}</p>
+                </div>
+            `).join('')}
+        </div>
+        ` : ''}
+    `;
+}
+
+function getRiskMeterWidth(riskLevel) {
+    const levels = { 'CRITICAL': 100, 'HIGH': 75, 'MEDIUM': 50, 'LOW': 25, 'INFO': 10 };
+    return levels[riskLevel] || 50;
+}
 
             // Загружаем пользователя при старте
         loadUser();
