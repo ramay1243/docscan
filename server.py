@@ -1071,7 +1071,7 @@ def analyze_document():
         # Записываем использование
         record_usage(user_id)
         
-                # Добавляем информацию о лимитах в ответ
+        # Добавляем информацию о лимитах в ответ
         user = get_user(user_id)
         plan = PLANS[user['plan']]
         analysis_result['usage_info'] = {
@@ -1088,13 +1088,16 @@ def analyze_document():
             'result': analysis_result
         })
 
-finally:
-    # Удаляем временный файл
-    try:
-        if temp_path and os.path.exists(temp_path):
-            os.unlink(temp_path)
-    except Exception as e:
-        print(f"Ошибка при удалении временного файла: {e}")
+    except Exception as e:  # ← ДОБАВЬ ЭТУ СТРОКУ
+        return jsonify({'error': f'Ошибка обработки: {str(e)}'}), 500
+
+    finally:
+        # Удаляем временный файл
+        try:
+            if temp_path and os.path.exists(temp_path):
+                os.unlink(temp_path)
+        except Exception as e:
+            print(f"Ошибка при удалении временного файла: {e}")
             
 # Обновляем endpoint использования
 @app.route('/usage', methods=['GET'])
@@ -1113,7 +1116,6 @@ def get_usage():
         'remaining': plan['daily_limit'] - user['used_today'],
         'total_used': user['total_used']
     })
-
 @app.route('/plans', methods=['GET'])
 def get_plans():
     """Получить информацию о тарифах"""
