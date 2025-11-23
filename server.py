@@ -466,6 +466,30 @@ def home():
             .risk-item { background: white; padding: 15px; margin: 10px 0; border-radius: 10px; border-left: 4px solid #e53e3e; }
             .success-item { background: white; padding: 15px; margin: 10px 0; border-radius: 10px; border-left: 4px solid #48bb78; }
             .summary { background: #e6fffa; padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 4px solid #38a169; }
+                    /* New Professional Sections */
+            .section { padding: 80px 0; }
+            .section-white { background: white; }
+            .section-title { text-align: center; font-size: 2.5em; font-weight: 700; margin-bottom: 60px; color: #2d3748; }
+            .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px; margin-top: 40px; }
+            .step { text-align: center; padding: 40px 20px; border-radius: 15px; background: #f7fafc; }
+            .step-icon { font-size: 4em; margin-bottom: 20px; }
+            .step h3 { font-size: 1.5em; font-weight: 600; margin-bottom: 15px; color: #2d3748; }
+            .step p { color: #718096; line-height: 1.6; }
+            
+            .doc-types { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 40px; }
+            .doc-type { background: #f7fafc; padding: 25px; border-radius: 12px; text-align: center; border-left: 4px solid #667eea; }
+            .doc-type-icon { font-size: 2.5em; margin-bottom: 15px; }
+            
+            .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-top: 40px; }
+            .pricing-card { background: white; padding: 40px 30px; border-radius: 20px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.1); border: 2px solid #e2e8f0; }
+            .pricing-card.featured { border-color: #667eea; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+            .pricing-card.featured .price { color: white; }
+            .pricing-card.featured .btn { background: white; color: #667eea; }
+            .plan-name { font-size: 1.4em; font-weight: 700; margin-bottom: 15px; }
+            .price { font-size: 2.5em; font-weight: 700; margin-bottom: 20px; color: #667eea; }
+            .features { list-style: none; margin-bottom: 30px; text-align: left; }
+            .features li { padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
+            .features li:last-child { border-bottom: none; }
         </style>
     </head>
     <body>
@@ -731,7 +755,84 @@ def home():
             }
         }
     </script>
+            <!-- How it Works Section -->
+            <div style="background: white; padding: 80px 0;">
+                <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
+                    <h2 style="text-align: center; font-size: 2.5em; margin-bottom: 60px; color: #2d3748;">Как это работает?</h2>
+                    <div class="steps">
+                        <div class="step">
+                            <div class="step-icon">📄</div>
+                            <h3>Загрузите документ</h3>
+                            <p>Загрузите договор в формате PDF, Word или текстовый файл</p>
+                        </div>
+                        <div class="step">
+                            <div class="step-icon">🤖</div>
+                            <h3>AI анализирует риски</h3>
+                            <p>YandexGPT проверяет каждую строку документа на потенциальные риски</p>
+                        </div>
+                        <div class="step">
+                            <div class="step-icon">📊</div>
+                            <h3>Получите отчет</h3>
+                            <p>Получите понятный список рисков и конкретные рекомендации</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
+            <!-- Document Types -->
+            <div style="background: #f7fafc; padding: 60px 0;">
+                <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
+                    <h3 style="text-align: center; margin-bottom: 40px; font-size: 1.8em; color: #2d3748;">Какие документы можно проверить?</h3>
+                    <div class="doc-types">
+                        <div class="doc-type">
+                            <div class="doc-type-icon">📝</div>
+                            <h4>Договоры аренды</h4>
+                        </div>
+                        <div class="doc-type">
+                            <div class="doc-type-icon">💼</div>
+                            <h4>Трудовые контракты</h4>
+                        </div>
+                        <div class="doc-type">
+                            <div class="doc-type-icon">🏠</div>
+                            <h4>Договоры купли-продажи</h4>
+                        </div>
+                        <div class="doc-type">
+                            <div class="doc-type-icon">⚖️</div>
+                            <h4>Юридические соглашения</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pricing Section -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 80px 0;">
+                <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
+                    <h2 style="text-align: center; color: white; font-size: 2.5em; margin-bottom: 60px;">Выберите тариф</h2>
+                    <div class="pricing-grid">
+                        <div class="pricing-card">
+                            <div class="plan-name">Бесплатный</div>
+                            <div class="price">0₽</div>
+                            <ul class="features">
+                                <li>✅ 1 анализ в день</li>
+                                <li>✅ AI-анализ YandexGPT</li>
+                                <li>✅ Все форматы файлов</li>
+                            </ul>
+                            <button class="btn" disabled style="background: #a0aec0;">Текущий тариф</button>
+                        </div>
+                        
+                        <div class="pricing-card featured">
+                            <div class="plan-name">Базовый</div>
+                            <div class="price">199₽/мес</div>
+                            <ul class="features">
+                                <li>🚀 10 анализов в день</li>
+                                <li>🚀 Приоритетный AI-анализ</li>
+                                <li>🚀 Все форматы файлов</li>
+                            </ul>
+                            <button class="btn" onclick="buyPlan('basic')">Купить за 199₽</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         <!-- ФУТЕР -->
         <div style="width: 100%; text-align: center; padding: 30px 0; color: #718096; border-top: 1px solid #e2e8f0; margin-top: 50px; background: white;">
             <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
