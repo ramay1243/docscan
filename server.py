@@ -755,11 +755,11 @@ def home():
             }
         }
     </script>
-                                   <!-- How it Works Section -->
-            <div style="background: white; padding: 80px 0;">
+                                              <!-- How it Works Section -->
+            <div style="background: white; padding: 80px 0; text-align: center;">
                 <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
-                    <h2 style="text-align: center; font-size: 2.5em; margin-bottom: 60px; color: #2d3748;">Как это работает?</h2>
-                    <div class="steps" style="max-width: 1000px; margin: 0 auto;">
+                    <h2 style="font-size: 2.5em; margin-bottom: 60px; color: #2d3748;">Как это работает?</h2>
+                    <div style="display: flex; justify-content: center; gap: 40px; flex-wrap: wrap;">
                         <div class="step">
                             <div class="step-icon">📄</div>
                             <h3>Загрузите документ</h3>
