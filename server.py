@@ -752,14 +752,6 @@ def home():
                 return;
             }
             
-            const planNames = {
-                'basic': 'Базовый (199₽)'
-            };
-            
-            if (!confirm(`Вы уверены что хотите купить тариф "${planNames[planType]}"?`)) {
-                return;
-            }
-            
             try {
                 const response = await fetch('/create-payment', {
                     method: 'POST',
