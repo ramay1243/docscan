@@ -521,10 +521,10 @@ def home():
             <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
                 <div class="upload-icon">📄</div>
                 <p><strong>Нажмите чтобы выбрать документ</strong></p>
-                <p style="color: #718096; margin-top: 15px;">PDF, DOCX, TXT (до 10MB)</p>
+                <p style="color: #718096; margin-top: 15px;">PDF, DOCX, TXT, ФОТО (до 10MB)</p>
             </div>
 
-            <input type="file" id="fileInput" style="display: none;" accept=".pdf,.docx,.txt" onchange="handleFileSelect(event)">
+            <input type="file" id="fileInput" style="display: none;" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.webp" onchange="handleFileSelect(event)">
             
             <div class="file-info" id="fileInfo" style="display: none;">
                 <strong>Выбран файл:</strong> <span id="fileName"></span>
@@ -974,16 +974,18 @@ def analyze_document():
         file.save(temp_path)
         
         try:
-            # Извлекаем текст
-            if file.filename.lower().endswith('.pdf'):
-                text = extract_text_from_pdf(temp_path)
-            elif file.filename.lower().endswith('.docx'):
-                text = extract_text_from_docx(temp_path)
-            elif file.filename.lower().endswith('.txt'):
-                with open(temp_path, 'r', encoding='utf-8') as f:
-                    text = f.read()
-            else:
-                return jsonify({'error': 'Неподдерживаемый формат файла'}), 400
+# Извлекаем текст
+if file.filename.lower().endswith('.pdf'):
+    text = extract_text_from_pdf(temp_path)
+elif file.filename.lower().endswith('.docx'):
+    text = extract_text_from_docx(temp_path)
+elif file.filename.lower().endswith('.txt'):
+    with open(temp_path, 'r', encoding='utf-8') as f:
+        text = f.read()
+elif file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
+    return jsonify({'error': '📸 Фото загружено! Но распознавание текста с фото пока не настроено. Используйте PDF, DOCX или TXT.'}), 400
+else:
+    return jsonify({'error': 'Неподдерживаемый формат файла'}), 400
             
             # Проверяем что текст извлекся
             if not text or len(text.strip()) < 10:
