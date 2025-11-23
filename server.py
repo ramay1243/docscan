@@ -916,7 +916,7 @@ def home():
                     <a href="/terms" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Пользовательское соглашение</a>
                     <a href="/privacy" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Политика конфиденциальности</a>
                     <a href="/offer" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Публичная оферта</a>
-                    <a href="mailto:docscanhelp@gmail.com" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;">Техподдержка</a>
+                    <a href="mailto:docscanhelp@gmail.com?subject=Вопрос по DocScan" style="color: #718096; text-decoration: none; margin: 0 15px; font-size: 14px;" target="_blank">Техподдержка</a>
                 </div>
                 <div style="font-size: 14px;">
                     © 2025 DocScan. Все права защищены.
