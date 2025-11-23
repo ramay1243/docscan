@@ -490,6 +490,16 @@ def home():
             .features { list-style: none; margin-bottom: 30px; text-align: left; }
             .features li { padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
             .features li:last-child { border-bottom: none; }
+
+                    /* FAQ Styles */
+        .faq-container { max-width: 700px; margin: 0 auto; }
+        .faq-item { margin-bottom: 15px; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .faq-question { background: white; padding: 20px 25px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; transition: background 0.3s; }
+        .faq-question:hover { background: #f7fafc; }
+        .faq-answer { background: white; padding: 0 25px; max-height: 0; overflow: hidden; transition: all 0.3s ease; }
+        .faq-answer.open { padding: 20px 25px; max-height: 500px; }
+        .faq-icon { font-size: 1.2em; font-weight: bold; transition: transform 0.3s; }
+        .faq-item.active .faq-icon { transform: rotate(45deg); }
         </style>
     </head>
     <body>
@@ -717,6 +727,25 @@ def home():
             // Загружаем пользователя при старте
         loadUser();
 
+                    // FAQ Accordion
+            function toggleFAQ(number) {
+                const answer = document.getElementById('faq-answer-' + number);
+                const item = answer.parentElement;
+                
+                // Close all other FAQs
+                document.querySelectorAll('.faq-answer').forEach(faq => {
+                    if (faq.id !== 'faq-answer-' + number) {
+                        faq.classList.remove('open');
+                        faq.parentElement.classList.remove('active');
+                    }
+                });
+                
+                // Toggle current FAQ
+                answer.classList.toggle('open');
+                item.classList.toggle('active');
+            }
+        </script>
+
         // 🔐 ФУНКЦИЯ ДЛЯ ПОКУПКИ ТАРИФОВ
         async function buyPlan(planType) {
             if (!currentUserId) {
@@ -822,6 +851,70 @@ def home():
                     </p>
                 </div>
             </div>
+            <!-- FAQ Section -->
+            <div style="background: #f7fafc; padding: 80px 0;">
+                <div style="max-width: 800px; margin: 0 auto; padding: 0 20px;">
+                    <h2 style="text-align: center; font-size: 2.5em; margin-bottom: 60px; color: #2d3748;">Частые вопросы</h2>
+                    
+                    <div class="faq-container">
+                        <!-- Question 1 -->
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(1)">
+                                <span>🤔 Какой максимальный размер файла?</span>
+                                <span class="faq-icon">+</span>
+                            </div>
+                            <div class="faq-answer" id="faq-answer-1">
+                                <p>Максимальный размер файла - 10MB. Поддерживаются форматы: PDF, DOCX, TXT.</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Question 2 -->
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(2)">
+                                <span>💰 Сколько стоит анализ?</span>
+                                <span class="faq-icon">+</span>
+                            </div>
+                            <div class="faq-answer" id="faq-answer-2">
+                                <p>1 анализ в день - бесплатно. Платные тарифы: Базовый (10 анализов в день) - 199₽/мес, Премиум (50 анализов) - 399₽/мес.</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Question 3 -->
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(3)">
+                                <span>🔒 Конфиденциальны ли мои документы?</span>
+                                <span class="faq-icon">+</span>
+                            </div>
+                            <div class="faq-answer" id="faq-answer-3">
+                                <p>Да! Документы не сохраняются на наших серверах. После анализа файлы автоматически удаляются. Текст передается в Yandex Cloud API по защищенному соединению.</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Question 4 -->
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(4)">
+                                <span>⏱️ Сколько времени занимает анализ?</span>
+                                <span class="faq-icon">+</span>
+                            </div>
+                            <div class="faq-answer" id="faq-answer-4">
+                                <p>Обычно анализ занимает 30-60 секунд. Скорость зависит от размера документа и загрузки сервера YandexGPT.</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Question 5 -->
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(5)">
+                                <span>🤖 Насколько точен AI-анализ?</span>
+                                <span class="faq-icon">+</span>
+                            </div>
+                            <div class="faq-answer" id="faq-answer-5">
+                                <p>YandexGPT хорошо справляется с выявлением типовых рисков в договорах. Однако это инструмент для первичной проверки - для важных документов рекомендуем консультацию с юристом.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
         <!-- ФУТЕР -->
         <div style="width: 100%; text-align: center; padding: 30px 0; color: #718096; border-top: 1px solid #e2e8f0; margin-top: 50px; background: white;">
             <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
