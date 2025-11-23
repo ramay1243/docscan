@@ -1862,7 +1862,9 @@ def payment_webhook():
             # Извлекаем user_id из метки (label)
             label = data.get('label', '')
             if label and '_' in label:
-                user_id, plan_type = label.split('_')
+                parts = label.split('_')
+                user_id = parts[0]
+                plan_type = parts[-1]
                 
                 # Активируем тариф автоматически
                 activate_response = activate_plan(user_id, plan_type)
