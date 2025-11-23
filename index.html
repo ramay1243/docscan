@@ -279,11 +279,11 @@
             <div class="upload-icon">📄</div>
             <p class="upload-text"><strong>Перетащите сюда документ</strong></p>
             <p>или</p>
-            <input type="file" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.webp">
+            <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.webp" style="display: none;">
             <button class="btn" onclick="document.getElementById('fileInput').click()">
                 Выберите файл
             </button>
-            <p style="color: #718096; margin-top: 15px;">PDF, DOCX, TXT (до 10MB)</p>
+            <p style="color: #718096; margin-top: 15px;">PDF, DOCX, TXT, JPG, PNG (до 10MB)</p>
         </div>
 
         <div class="file-info" id="fileInfo">
@@ -393,10 +393,11 @@
             // Проверка типа файла
             const validTypes = ['application/pdf', 
                               'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
-                              'text/plain'];
+                              'text/plain',
+                              'image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
             
-            if (!validTypes.includes(file.type) && !file.name.match(/\.(pdf|docx|txt)$/)) {
-                alert('Пожалуйста, выберите файл в формате PDF, DOCX или TXT');
+            if (!validTypes.includes(file.type) && !file.name.match(/\.(pdf|docx|txt|jpg|jpeg|png|webp)$/i)) {
+                alert('Пожалуйста, выберите файл в формате PDF, DOCX, TXT, JPG или PNG');
                 return;
             }
 
@@ -531,3 +532,4 @@
 </body>
 
 </html>
+
