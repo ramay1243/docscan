@@ -704,8 +704,8 @@ def home():
                 const file = event.target.files[0];
                 if (!file) return;
                 
-                if (!file.name.match(/\\.(pdf|docx|txt)$/)) {
-                    alert('Пожалуйста, выберите файл в формате PDF, DOCX или TXT');
+                if (!file.name.match(/\.(pdf|docx|txt|jpg|jpeg|png|webp)$/i)) {
+                    alert('Пожалуйста, выберите файл в формате PDF, DOCX, TXT, JPG или PNG');
                     return;
                 }
 
