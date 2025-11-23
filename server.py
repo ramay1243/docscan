@@ -13,6 +13,9 @@ import json
 import base64
 import logging
 import sys
+# Включение подробного логирования
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 # 🔧 УМНАЯ СИСТЕМА АНАЛИЗА ДОКУМЕНТОВ - ДОБАВЬТЕ ЭТОТ КОД
 SMART_ANALYSIS_CONFIG = {
