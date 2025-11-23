@@ -1843,25 +1843,35 @@ def payment_webhook():
     try:
         print("🔄 Webhook получен от ЮMoney")
         
-        # Парсим данные от ЮMoney
-        data = request.json or request.form
-        print(f"📨 Данные от ЮMoney: {data}")
+        # ЮMoney отправляет form-data, а не JSON
+        data = request.form
+        print(f"📨 Данные от ЮMoney: {dict(data)}")
         
-        # Извлекаем user_id из метки (label)
-        label = data.get('label', '')
-        if label and '_' in label:
-            user_id, plan_type = label.split('_')
-        else:
-            # Если нет метки, используем другие поля
-            user_id = data.get('customerNumber') or data.get('user_id')
-            plan_type = 'basic'
+        # Проверяем секрет (если есть в заголовках)
+        secret = request.headers.get('Authorization')
+        expected_secret = "+1OlQmd/2sC5eUxusyuNpZyh"
         
-        if user_id and user_id != 'label':
-            # Активируем тариф автоматически
-            activate_response = activate_plan(user_id, plan_type)
-            print(f"✅ Тариф активирован для {user_id}: {activate_response}")
+        if secret and secret != expected_secret:
+            print("❌ Неверный секрет webhook")
+            return jsonify({'error': 'Invalid secret'}), 403
         
-        return jsonify({'success': True})
+        # Проверяем что это успешный платеж
+        if (data.get('unaccepted') == 'false' and 
+            data.get('codepro') == 'false'):
+            
+            # Извлекаем user_id из метки (label)
+            label = data.get('label', '')
+            if label and '_' in label:
+                user_id, plan_type = label.split('_')
+                
+                # Активируем тариф автоматически
+                activate_response = activate_plan(user_id, plan_type)
+                print(f"✅ Тариф активирован для {user_id}: {activate_response}")
+                
+                return jsonify({'success': True, 'message': 'Тариф активирован'})
+        
+        print("ℹ️  Платеж не прошел проверки или тестовый")
+        return jsonify({'success': True, 'message': 'Уведомление получено'})
         
     except Exception as e:
         print(f"❌ Ошибка webhook: {e}")
