@@ -779,7 +779,7 @@ def home():
                 </div>
             </div>
 
-            <!-- Document Types -->
+                       <!-- Document Types -->
             <div style="background: #f7fafc; padding: 60px 0;">
                 <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
                     <h3 style="text-align: center; margin-bottom: 40px; font-size: 1.8em; color: #2d3748;">Какие документы можно проверить?</h3>
@@ -800,10 +800,28 @@ def home():
                             <div class="doc-type-icon">⚖️</div>
                             <h4>Юридические соглашения</h4>
                         </div>
+                        <div class="doc-type">
+                            <div class="doc-type-icon">📊</div>
+                            <h4>Коммерческие предложения</h4>
+                        </div>
+                        <div class="doc-type">
+                            <div class="doc-type-icon">📑</div>
+                            <h4>Деловая переписка</h4>
+                        </div>
+                        <div class="doc-type">
+                            <div class="doc-type-icon">📋</div>
+                            <h4>Публичные оферты</h4>
+                        </div>
+                        <div class="doc-type">
+                            <div class="doc-type-icon">🔧</div>
+                            <h4>Технические задания</h4>
+                        </div>
                     </div>
+                    <p style="text-align: center; margin-top: 30px; color: #718096; font-size: 1.1em;">
+                        <strong>И любые другие текстовые документы!</strong> AI анализирует суть, а не формат.
+                    </p>
                 </div>
             </div>
-
         <!-- ФУТЕР -->
         <div style="width: 100%; text-align: center; padding: 30px 0; color: #718096; border-top: 1px solid #e2e8f0; margin-top: 50px; background: white;">
             <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
