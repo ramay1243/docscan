@@ -1921,6 +1921,20 @@ def upgrade_plan():
         logger.error(f"❌ Ошибка смены тарифа: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# Тестовый webhook для отладки ЮMoney
+@app.route('/yoomoney-test-webhook', methods=['POST'])
+def yoomoney_test_webhook():
+    """Тестовый webhook для отладки"""
+    print("🎯 ТЕСТОВЫЙ Webhook получен от ЮMoney")
+    
+    # Логируем ВСЕ что пришло
+    print(f"📨 Заголовки: {dict(request.headers)}")
+    print(f"📨 Данные: {request.get_data()}")
+    print(f"📨 Form data: {request.form}")
+    print(f"📨 JSON data: {request.json}")
+    
+    return jsonify({'success': True, 'message': 'Тестовый webhook получен'})
+
 if __name__ == '__main__':
     print("🚀 DocScan Server запущен!")
     print("🤖 YandexGPT: Активен")
