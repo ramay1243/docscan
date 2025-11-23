@@ -299,6 +299,7 @@ def extract_text_from_image(file_path):
             }]
         }
         
+        print(f"📨 Отправляем запрос в Vision API...")
         response = requests.post(
             "https://vision.api.cloud.yandex.net/vision/v1/batchAnalyze",
             headers=headers,
@@ -306,26 +307,39 @@ def extract_text_from_image(file_path):
             timeout=30
         )
         
+        print(f"📊 Ответ API: статус {response.status_code}")
+        
         if response.status_code == 200:
             result = response.json()
-            # Извлекаем весь распознанный текст
-            text_blocks = []
-            for page in result['results'][0]['results'][0]['textDetection']['pages']:
-                for block in page['blocks']:
-                    for line in block['lines']:
-                        line_text = ' '.join([word['text'] for word in line['words']])
-                        text_blocks.append(line_text)
+            print(f"📄 Полный ответ API: {json.dumps(result, indent=2, ensure_ascii=False)}")
             
-            recognized_text = '\n'.join(text_blocks)
-            print(f"✅ Распознано {len(recognized_text)} символов с фото")
-            return recognized_text
+            # Проверяем наличие textDetection в ответе
+            if ('results' in result and len(result['results']) > 0 and
+                'results' in result['results'][0] and len(result['results'][0]['results']) > 0 and
+                'textDetection' in result['results'][0]['results'][0]):
+                
+                # Извлекаем весь распознанный текст
+                text_blocks = []
+                for page in result['results'][0]['results'][0]['textDetection']['pages']:
+                    for block in page['blocks']:
+                        for line in block['lines']:
+                            line_text = ' '.join([word['text'] for word in line['words']])
+                            text_blocks.append(line_text)
+                
+                recognized_text = '\n'.join(text_blocks)
+                print(f"✅ Распознано {len(recognized_text)} символов с фото")
+                return recognized_text
+            else:
+                error_msg = "❌ В ответе API нет textDetection"
+                print(error_msg)
+                return error_msg
         else:
-            error_msg = f"Ошибка Vision API: {response.status_code}"
-            print(f"❌ {error_msg}")
+            error_msg = f"❌ Ошибка Vision API: {response.status_code} - {response.text}"
+            print(error_msg)
             return error_msg
             
     except Exception as e:
-        error_msg = f"Ошибка распознавания: {str(e)}"
+        error_msg = f"❌ Ошибка распознавания: {str(e)}"
         print(f"❌ {error_msg}")
         return error_msg
 
