@@ -946,6 +946,8 @@ def create_user():
         return jsonify({'success': False, 'error': str(e)})
 
 # Обновляем endpoint анализа для работы с user_id
+# ... предыдущий код ...
+
 @app.route('/analyze', methods=['POST'])
 def analyze_document():
     # Получаем user_id из формы или используем default
@@ -961,6 +963,7 @@ def analyze_document():
             'upgrade_required': True
         }), 402
     
+    temp_path = None  # Объявляем переменную заранее
     try:
         if 'file' not in request.files:
             return jsonify({'error': 'Файл не загружен'}), 400
@@ -973,60 +976,56 @@ def analyze_document():
         temp_path = os.path.join(tempfile.gettempdir(), f"{uuid.uuid4()}_{file.filename}")
         file.save(temp_path)
         
-    # Извлекаем текст
-    if file.filename.lower().endswith('.pdf'):
-        text = extract_text_from_pdf(temp_path)
-    elif file.filename.lower().endswith('.docx'):
-        text = extract_text_from_docx(temp_path)
-    elif file.filename.lower().endswith('.txt'):
-        with open(temp_path, 'r', encoding='utf-8') as f:
-            text = f.read()
-    elif file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
-        return jsonify({'error': '📸 Фото загружено! Но распознавание текста с фото пока не настроено. Используйте PDF, DOCX или TXT.'}), 400
-    else:
-        return jsonify({'error': 'Неподдерживаемый формат файла'}), 400
+        # Извлекаем текст
+        if file.filename.lower().endswith('.pdf'):
+            text = extract_text_from_pdf(temp_path)
+        elif file.filename.lower().endswith('.docx'):
+            text = extract_text_from_docx(temp_path)
+        elif file.filename.lower().endswith('.txt'):
+            with open(temp_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+        elif file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
+            return jsonify({'error': '📸 Фото загружено! Но распознавание текста с фото пока не настроено. Используйте PDF, DOCX или TXT.'}), 400
+        else:
+            return jsonify({'error': 'Неподдерживаемый формат файла'}), 400
 
-except Exception as e:
-    return jsonify({'error': f'Ошибка обработки файла: {str(e)}'}), 500
-            
-            # Проверяем что текст извлекся
-            if not text or len(text.strip()) < 10:
-                return jsonify({'error': 'Не удалось извлечь текст из файла'}), 400
-            
-            # Анализируем текст
-            analysis_result = analyze_text(text, user_id)
-            
-            # Записываем использование
-            record_usage(user_id)
-            
-            # Добавляем информацию о лимитах в ответ
-            user = get_user(user_id)
-            plan = PLANS[user['plan']]
-            analysis_result['usage_info'] = {
-                'used_today': user['used_today'],
-                'daily_limit': plan['daily_limit'],
-                'plan_name': plan['name'],
-                'remaining': plan['daily_limit'] - user['used_today']
-            }
-            
-            return jsonify({
-                'success': True,
-                'filename': file.filename,
-                'user_id': user_id,
-                'result': analysis_result
-            })
-            
-        finally:
-            # Удаляем временный файл
-            try:
-                if os.path.exists(temp_path):
-                    os.unlink(temp_path)
-            except:
-                pass
+        # Проверяем что текст извлекся
+        if not text or len(text.strip()) < 10:
+            return jsonify({'error': 'Не удалось извлечь текст из файла'}), 400
+        
+        # Анализируем текст
+        analysis_result = analyze_text(text, user_id)
+        
+        # Записываем использование
+        record_usage(user_id)
+        
+        # Добавляем информацию о лимитах в ответ
+        user = get_user(user_id)
+        plan = PLANS[user['plan']]
+        analysis_result['usage_info'] = {
+            'used_today': user['used_today'],
+            'daily_limit': plan['daily_limit'],
+            'plan_name': plan['name'],
+            'remaining': plan['daily_limit'] - user['used_today']
+        }
+        
+        return jsonify({
+            'success': True,
+            'filename': file.filename,
+            'user_id': user_id,
+            'result': analysis_result
+        })
             
     except Exception as e:
         return jsonify({'error': f'Ошибка обработки: {str(e)}'}), 500
-
+    finally:
+        # Удаляем временный файл
+        try:
+            if temp_path and os.path.exists(temp_path):
+                os.unlink(temp_path)
+        except Exception as e:
+            print(f"Ошибка при удалении временного файла: {e}")
+            
 # Обновляем endpoint использования
 @app.route('/usage', methods=['GET'])
 def get_usage():
