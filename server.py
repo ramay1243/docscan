@@ -11,6 +11,72 @@ import secrets
 from functools import wraps
 import json
 
+# Система лимитов по IP
+IP_LIMITS_FILE = '/tmp/docscan_ip_limits.json'
+
+def load_ip_limits():
+    """Загружает лимиты по IP из файла"""
+    try:
+        if os.path.exists(IP_LIMITS_FILE):
+            with open(IP_LIMITS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                
+                # Очищаем старые записи (старше 1 дня)
+                today = date.today().isoformat()
+                clean_data = {}
+                for ip, ip_data in data.items():
+                    if ip_data.get('last_reset', today) >= today:
+                        clean_data[ip] = ip_data
+                
+                print(f"✅ Загружено {len(clean_data)} IP-адресов")
+                return clean_data
+    except Exception as e:
+        print(f"❌ Ошибка загрузки IP-лимитов: {e}")
+    
+    return {}
+
+def save_ip_limits():
+    """Сохраняет лимиты по IP в файл"""
+    try:
+        with open(IP_LIMITS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(ip_limits, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"❌ Ошибка сохранения IP-лимитов: {e}")
+
+# Загружаем IP лимиты при старте
+ip_limits = load_ip_limits()
+
+def can_analyze_by_ip(ip_address):
+    """Проверяет может ли IP-адрес сделать БЕСПЛАТНЫЙ анализ"""
+    # Исключаем локальные IP для тестирования
+    if ip_address in ['127.0.0.1', 'localhost']:
+        return True
+        
+    if ip_address not in ip_limits:
+        ip_limits[ip_address] = {
+            'used_today': 0,
+            'last_reset': date.today().isoformat(),
+            'first_seen': datetime.now().isoformat()
+        }
+    
+    ip_data = ip_limits[ip_address]
+    
+    # Сбрасываем лимит если новый день
+    if ip_data['last_reset'] < date.today().isoformat():
+        ip_data['used_today'] = 0
+        ip_data['last_reset'] = date.today().isoformat()
+    
+    # МАКСИМУМ 1 БЕСПЛАТНЫЙ АНАЛИЗ В ДЕНЬ С ОДНОГО IP
+    can_analyze = ip_data['used_today'] < 1
+    
+    if can_analyze:
+        ip_data['used_today'] += 1
+        save_ip_limits()
+        print(f"📡 IP {ip_address} использует БЕСПЛАТНЫЙ анализ")
+    else:
+        print(f"🚫 IP {ip_address} уже использовал бесплатный анализ сегодня")
+    
+    return can_analyze
 app = Flask(__name__)
 # Добавляем секретный ключ для сессий
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
@@ -160,6 +226,12 @@ def can_analyze(user_id='default'):
             user['plan'] = 'free'
             user['plan_expires'] = None
             save_users()
+    
+    # ПРОВЕРКА ПО IP - ТОЛЬКО ДЛЯ БЕСПЛАТНЫХ - ДОБАВИЛИ
+    if user['plan'] == 'free':
+        user_ip = request.remote_addr
+        if not can_analyze_by_ip(user_ip):
+            return False
     
     return user['used_today'] < PLANS[user['plan']]['daily_limit']
 def record_usage(user_id='default'):
