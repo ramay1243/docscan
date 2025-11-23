@@ -10,6 +10,7 @@ from datetime import datetime, date
 import secrets
 from functools import wraps
 import json
+import base64
 
 # Система лимитов по IP
 IP_LIMITS_FILE = '/tmp/docscan_ip_limits.json'
@@ -263,6 +264,60 @@ def extract_text_from_docx(file_path):
     except Exception as e:
         return f"Ошибка чтения DOCX: {str(e)}"
     return text
+
+def extract_text_from_image(file_path):
+    """Извлекает текст с фото через Yandex Vision API"""
+    try:
+        print("🖼️ Начинаем распознавание фото...")
+        
+        # Кодируем изображение в base64
+        with open(file_path, 'rb') as image_file:
+            image_data = base64.b64encode(image_file.read()).decode('utf-8')
+        
+        headers = {
+            "Authorization": f"Api-Key {YANDEX_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "folderId": YANDEX_FOLDER_ID,
+            "analyzeSpecs": [{
+                "content": image_data,
+                "features": [{
+                    "type": "TEXT_DETECTION"
+                }]
+            }]
+        }
+        
+        response = requests.post(
+            "https://vision.api.cloud.yandex.net/vision/v1/batchAnalyze",
+            headers=headers,
+            json=data,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            # Извлекаем весь распознанный текст
+            text_blocks = []
+            for page in result['results'][0]['results'][0]['textDetection']['pages']:
+                for block in page['blocks']:
+                    for line in block['lines']:
+                        line_text = ' '.join([word['text'] for word in line['words']])
+                        text_blocks.append(line_text)
+            
+            recognized_text = '\n'.join(text_blocks)
+            print(f"✅ Распознано {len(recognized_text)} символов с фото")
+            return recognized_text
+        else:
+            error_msg = f"Ошибка Vision API: {response.status_code}"
+            print(f"❌ {error_msg}")
+            return error_msg
+            
+    except Exception as e:
+        error_msg = f"Ошибка распознавания: {str(e)}"
+        print(f"❌ {error_msg}")
+        return error_msg
 
 def parse_fallback_response(ai_response):
     """Резервный парсинг для неструктурированных ответов"""
@@ -521,7 +576,11 @@ def home():
             <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
                 <div class="upload-icon">📄</div>
                 <p><strong>Нажмите чтобы выбрать документ</strong></p>
-                <p style="color: #718096; margin-top: 15px;">PDF, DOCX, TXT, ФОТО (до 10MB)</p>
+                <p style="color: #718096; margin-top: 15px;">
+    PDF, DOCX, TXT 
+    <span style="color: #e53e3e; font-weight: bold;">• ФОТО (только для платных тарифов)</span>
+    (до 10MB)
+</p>
             </div>
 
             <input type="file" id="fileInput" style="display: none;" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.webp" onchange="handleFileSelect(event)">
@@ -566,6 +625,7 @@ def home():
                             <li style="padding: 5px 0;">🚀 10 анализов в день</li>
                             <li style="padding: 5px 0;">🚀 Приоритетный AI-анализ</li>
                             <li style="padding: 5px 0;">🚀 Быстрая обработка</li>
+                            <li style="padding: 5px 0;">📸 Распознавание фото документов</li>
                         </ul>
                         <button class="btn" onclick="buyPlan('basic')" style="background: #38a169;">Купить за 199₽</button>
                     </div>
@@ -985,7 +1045,21 @@ def analyze_document():
             with open(temp_path, 'r', encoding='utf-8') as f:
                 text = f.read()
         elif file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
-            return jsonify({'error': '📸 Фото загружено! Но распознавание текста с фото пока не настроено. Используйте PDF, DOCX или TXT.'}), 400
+    # ПРОВЕРЯЕМ ТАРИФ - фото только для платных пользователей!
+    user = get_user(user_id)
+    if user['plan'] == 'free':
+        return jsonify({
+            'success': False,
+            'error': '📸 Распознавание фото доступно только для платных тарифов!',
+            'upgrade_required': True,
+            'message': '💎 Перейдите на Базовый тариф (199₽/мес) для анализа фото документов'
+        }), 402
+    
+    # Для платных пользователей - распознаем фото
+    print(f"👤 Пользователь {user_id} (тариф: {user['plan']}) загрузил фото")
+    text = extract_text_from_image(temp_path)
+    if not text or "Ошибка" in text or len(text.strip()) < 10:
+        return jsonify({'error': f'❌ Не удалось распознать текст с фото. Попробуйте более четкое изображение. Ошибка: {text}'}), 400
         else:
             return jsonify({'error': 'Неподдерживаемый формат файла'}), 400
 
