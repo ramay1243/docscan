@@ -1044,22 +1044,22 @@ def analyze_document():
         elif file.filename.lower().endswith('.txt'):
             with open(temp_path, 'r', encoding='utf-8') as f:
                 text = f.read()
-elif file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
-    # ПРОВЕРЯЕМ ТАРИФ - фото только для платных пользователей!
-    user = get_user(user_id)
-    if user['plan'] == 'free':
-        return jsonify({
-            'success': False,
-            'error': '📸 Распознавание фото доступно только для платных тарифов!',
-            'upgrade_required': True,
-            'message': '💎 Перейдите на Базовый тариф (199₽/мес) для анализа фото документов'
-        }), 402
-    
-    # Для платных пользователей - распознаем фото
-    print(f"👤 Пользователь {user_id} (тариф: {user['plan']}) загрузил фото")
-    text = extract_text_from_image(temp_path)
-    if not text or "Ошибка" in text or len(text.strip()) < 10:
-        return jsonify({'error': f'❌ Не удалось распознать текст с фото. Попробуйте более четкое изображение. Ошибка: {text}'}), 400
+        elif file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
+            # ПРОВЕРЯЕМ ТАРИФ - фото только для платных пользователей!
+            user = get_user(user_id)
+            if user['plan'] == 'free':
+                return jsonify({
+                    'success': False,
+                    'error': '📸 Распознавание фото доступно только для платных тарифов!',
+                    'upgrade_required': True,
+                    'message': '💎 Перейдите на Базовый тариф (199₽/мес) для анализа фото документов'
+                }), 402
+            
+            # Для платных пользователей - распознаем фото
+            print(f"👤 Пользователь {user_id} (тариф: {user['plan']}) загрузил фото")
+            text = extract_text_from_image(temp_path)
+            if not text or "Ошибка" in text or len(text.strip()) < 10:
+                return jsonify({'error': f'❌ Не удалось распознать текст с фото. Попробуйте более четкое изображение. Ошибка: {text}'}), 400
 
         # Проверяем что текст извлекся
         if not text or len(text.strip()) < 10:
@@ -1081,22 +1081,20 @@ elif file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
             'remaining': plan['daily_limit'] - user['used_today']
         }
         
-        return jsonify({
-            'success': True,
-            'filename': file.filename,
-            'user_id': user_id,
-            'result': analysis_result
-        })
-            
+            return jsonify({
+        'success': True,
+        'filename': file.filename,
+        'user_id': user_id,
+        'result': analysis_result
+    })
+    
+finally:
+    # Удаляем временный файл
+    try:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
     except Exception as e:
-        return jsonify({'error': f'Ошибка обработки: {str(e)}'}), 500
-    finally:
-        # Удаляем временный файл
-        try:
-            if temp_path and os.path.exists(temp_path):
-                os.unlink(temp_path)
-        except Exception as e:
-            print(f"Ошибка при удалении временного файла: {e}")
+        print(f"Ошибка при удалении временного файла: {e}")
             
 # Обновляем endpoint использования
 @app.route('/usage', methods=['GET'])
