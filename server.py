@@ -145,16 +145,15 @@ def can_analyze_by_ip(ip_address):
     if ip_data['last_reset'] < date.today().isoformat():
         ip_data['used_today'] = 0
         ip_data['last_reset'] = date.today().isoformat()
+        print(f"🔄 Сброшен лимит для IP {ip_address}")
     
     # МАКСИМУМ 1 БЕСПЛАТНЫЙ АНАЛИЗ В ДЕНЬ С ОДНОГО IP
     can_analyze = ip_data['used_today'] < 1
     
     if can_analyze:
-        ip_data['used_today'] += 1
-        save_ip_limits()
-        print(f"📡 IP {ip_address} использует БЕСПЛАТНЫЙ анализ")
+        print(f"📡 IP {ip_address} может сделать анализ ({ip_data['used_today']}/1)")
     else:
-        print(f"🚫 IP {ip_address} уже использовал бесплатный анализ сегодня")
+        print(f"🚫 IP {ip_address} уже использовал бесплатный анализ сегодня ({ip_data['used_today']}/1)")
     
     return can_analyze
 app = Flask(__name__)
@@ -315,11 +314,31 @@ def can_analyze(user_id='default'):
     
     return user['used_today'] < PLANS[user['plan']]['daily_limit']
 def record_usage(user_id='default'):
-    """Записывает использование"""
+    """Записывает использование для пользователя и IP"""
     user = get_user(user_id)
     user['used_today'] += 1
     user['total_used'] += 1
-    save_users()  # Сохраняем при каждом использовании
+    
+    # 🔽 ДОБАВЛЯЕМ ЗАПИСЬ ДЛЯ IP ДЛЯ БЕСПЛАТНЫХ ПОЛЬЗОВАТЕЛЕЙ 🔽
+    if user['plan'] == 'free':
+        user_ip = request.remote_addr
+        if user_ip not in ip_limits:
+            ip_limits[user_ip] = {
+                'used_today': 0,
+                'last_reset': date.today().isoformat(),
+                'first_seen': datetime.now().isoformat()
+            }
+        
+        # Сбрасываем лимит IP если новый день
+        if ip_limits[user_ip]['last_reset'] < date.today().isoformat():
+            ip_limits[user_ip]['used_today'] = 0
+            ip_limits[user_ip]['last_reset'] = date.today().isoformat()
+        
+        ip_limits[user_ip]['used_today'] += 1
+        save_ip_limits()
+        print(f"📡 Записано использование для IP {user_ip}: {ip_limits[user_ip]['used_today']}/1")
+    
+    save_users()
     print(f"📊 Записан анализ для {user_id}. Сегодня: {user['used_today']}, Всего: {user['total_used']}")
 
 # Функции анализа документов
