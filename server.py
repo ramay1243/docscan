@@ -293,8 +293,12 @@ def extract_text_from_image(file_path):
             "folderId": YANDEX_FOLDER_ID,
             "analyzeSpecs": [{
                 "content": image_data,
-                "features": [{
-                    "type": "TEXT_DETECTION"
+                 "features": [{
+                    "type": "TEXT_DETECTION",
+                    "text_detection_config": {
+                        "language_codes": ["ru", "en"],
+                        "model": "page"
+                    }
                 }]
             }]
         }
