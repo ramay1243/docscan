@@ -744,7 +744,6 @@ def home():
                 answer.classList.toggle('open');
                 item.classList.toggle('active');
             }
-        </script>
 
         // 🔐 ФУНКЦИЯ ДЛЯ ПОКУПКИ ТАРИФОВ
         async function buyPlan(planType) {
