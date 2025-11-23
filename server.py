@@ -1019,28 +1019,6 @@ def home():
                 <strong>📊 Анализов сегодня:</strong> <span id="usageInfo">0/1</span><br>
             </div>
 
-            <div id="accountSection" style="background: #f0f8ff; padding: 15px; border-radius: 10px; margin: 20px 0; border: 1px solid #667eea;">
-                <h4 style="margin: 0 0 10px 0; color: #2d3748;">💾 Восстановить аккаунт</h4>
-                <p style="margin: 0 0 15px 0; color: #4a5568; font-size: 14px;">
-                    Если у вас уже был платный тариф - введите email чтобы восстановить его на этом устройстве
-                </p>
-                
-                <button onclick="restoreAccount()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;">
-                    Войти по email
-                </button>
-                
-                <!-- Блок сохранения показываем только платным -->
-                <div id="saveAccountSection" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #cbd5e0;">
-                    <p style="margin: 0 0 10px 0; color: #2d3748; font-size: 14px;">
-                        <strong>Сохранить этот аккаунт:</strong> Привяжите email чтобы использовать тариф на других устройствах
-                    </p>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="email" id="userEmail" placeholder="Ваш email" style="padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: 6px; flex: 1; max-width: 250px;">
-                        <button onclick="saveAccount()" style="padding: 8px 16px; background: #48bb78; color: white; border: none; border-radius: 6px; cursor: pointer;">Сохранить</button>
-                    </div>
-                </div>
-            </div>
-
             <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
                 <div class="upload-icon">📄</div>
                 <p><strong>Нажмите чтобы выбрать документ</strong></p>
@@ -1125,25 +1103,18 @@ def home():
             }
 
             function updateUserInfo() {
-    if (!currentUserId) return;
-    
-    document.getElementById('userId').textContent = currentUserId;
-    
-    // Загружаем информацию об использовании
-    fetch(`/usage?user_id=${currentUserId}`)
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById('usageInfo').textContent = 
-                `${data.used_today}/${data.daily_limit}`;
-        
-            // Показываем блок сохранения только для платных пользователей
-            if (data.plan !== 'free') {
-                document.getElementById('saveAccountSection').style.display = 'block';
-            } else {
-                document.getElementById('saveAccountSection').style.display = 'none';
+                if (!currentUserId) return;
+                
+                document.getElementById('userId').textContent = currentUserId;
+                
+                // Загружаем информацию об использовании
+                fetch(`/usage?user_id=${currentUserId}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        document.getElementById('usageInfo').textContent = 
+                            `${data.used_today}/${data.daily_limit}`;
+                    });
             }
-        });
-}
 
             function copyUserId() {
                 navigator.clipboard.writeText(currentUserId);
@@ -1373,57 +1344,6 @@ function getRiskMeterWidth(riskLevel) {
     return levels[riskLevel] || 50;
 }
 
-// Функция восстановления аккаунта
-function restoreAccount() {
-    const email = prompt('Введите email вашего аккаунта:');
-    if (email) {
-        fetch('/get-user-by-email', {
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({email: email})
-        }).then(r => r.json()).then(data => {
-            if (data.success) {
-                currentUserId = data.user_id;
-                localStorage.setItem('docscan_user_id', currentUserId);
-                updateUserInfo();
-                alert('✅ Аккаунт восстановлен! Теперь у вас доступ к вашему тарифу на этом устройстве.');
-            } else {
-                alert('❌ Аккаунт не найден. Убедитесь что:\n• Email введен правильно\n• Вы сохраняли аккаунт на другом устройстве\n• У вас был платный тариф');
-            }
-        }).catch(error => {
-            alert('❌ Ошибка соединения: ' + error.message);
-        });
-    }
-}
-
-// Функция сохранения аккаунта
-function saveAccount() {
-    const email = document.getElementById('userEmail').value;
-    if (!email) {
-        alert('Введите email');
-        return;
-    }
-    
-    if (!email.includes('@') || !email.includes('.')) {
-        alert('Введите корректный email адрес');
-        return;
-    }
-    
-    fetch('/save-user-id', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({email: email, user_id: currentUserId})
-    }).then(r => r.json()).then(data => {
-        if (data.success) {
-            alert('✅ Аккаунт сохранен! Теперь вы можете войти по этому email на любом другом устройстве.');
-            document.getElementById('userEmail').value = ''; // Очищаем поле
-        } else {
-            alert('❌ ' + data.error);
-        }
-    }).catch(error => {
-        alert('❌ Ошибка соединения: ' + error.message);
-    });
-}
             // Загружаем пользователя при старте
         loadUser();
 
@@ -1474,56 +1394,6 @@ function saveAccount() {
                 alert('Ошибка соединения: ' + error.message);
             }
         }
-        
-
-            // Функция восстановления аккаунта
-            function restoreAccount() {
-                const email = prompt('Введите email вашего аккаунта:');
-                if (email) {
-                    fetch('/get-user-by-email', {
-                        method: 'POST', 
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({email: email})
-                    }).then(r => r.json()).then(data => {
-                        if (data.success) {
-                            currentUserId = data.user_id;
-                            localStorage.setItem('docscan_user_id', currentUserId);
-                            updateUserInfo();
-                            alert('✅ Аккаунт восстановлен! Теперь у вас доступ к вашему тарифу на этом устройстве.');
-                        } else {
-                            alert('❌ Аккаунт не найден. Убедитесь что:\n• Email введен правильно\n• Вы сохраняли аккаунт на другом устройстве\n• У вас был платный тариф');
-                        }
-                    });
-                }
-            }
-
-            // Функция сохранения аккаунта
-            function saveAccount() {
-                const email = document.getElementById('userEmail').value;
-                if (!email) {
-                    alert('Введите email');
-                    return;
-                }
-                
-                if (!email.includes('@') || !email.includes('.')) {
-                    alert('Введите корректный email адрес');
-                    return;
-                }
-                
-                fetch('/save-user-id', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({email: email, user_id: currentUserId})
-                }).then(r => r.json()).then(data => {
-                    if (data.success) {
-                        alert('✅ Аккаунт сохранен! Теперь вы можете войти по этому email на любом другом устройстве.');
-                        document.getElementById('userEmail').value = ''; // Очищаем поле
-                    } else {
-                        alert('❌ ' + data.error);
-                    }
-                });
-            }
-
     </script>
                                               <!-- How it Works Section -->
             <div style="background: white; padding: 80px 0; text-align: center;">
@@ -1675,46 +1545,6 @@ function saveAccount() {
 </html>
     """
 
-# 🔽 ДОБАВЬ ЭТОТ КОД ПРЯМО СЮДА 🔽
-
-@app.route('/save-user-id', methods=['POST'])
-def save_user_id():
-    """Сохраняем email -> user_id"""
-    data = request.json
-    email = data.get('email')
-    user_id = data.get('user_id')
-    
-    # Проверяем что пользователь платный
-    user = get_user(user_id)
-    if user['plan'] == 'free':
-        return jsonify({'success': False, 'error': 'Только для платных тарифов'})
-    
-    # Сохраняем в файл
-    try:
-        with open('/tmp/user_emails.json', 'a', encoding='utf-8') as f:
-            f.write(f'{email}:{user_id}\n')
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/get-user-by-email', methods=['POST'])  
-def get_user_by_email():
-    """Находим user_id по email"""
-    data = request.json
-    email = data.get('email')
-    
-    try:
-        with open('/tmp/user_emails.json', 'r', encoding='utf-8') as f:
-            for line in f:
-                if ':' in line and line.startswith(email + ':'):
-                    user_id = line.split(':', 1)[1].strip()
-                    return jsonify({'success': True, 'user_id': user_id})
-    except:
-        pass
-    
-    return jsonify({'success': False, 'error': 'Аккаунт не найден'})
-
-# 🔼 КОНЕЦ ДОБАВЛЕНИЯ 🔼
 # Добавляем endpoint для создания пользователя
 @app.route('/create-user', methods=['POST'])
 def create_user():
