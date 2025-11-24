@@ -1426,25 +1426,16 @@ function getRiskMeterWidth(riskLevel) {
             Какие документы можно проверить?
         </h3>
         
-        <!-- Карусель -->
-        <div class="carousel-container">
-            <div class="carousel" id="docCarousel">
-                <div class="carousel-track" id="carouselTrack">
-                    <!-- Документы будут добавлены через JavaScript -->
+        <!-- Упрощенная карусель -->
+        <div class="simple-carousel">
+            <div class="carousel-wrapper">
+                <div class="carousel-items" id="carouselItems">
+                    <!-- Элементы будут добавлены через JS -->
                 </div>
             </div>
-            
-            <!-- Кнопки навигации -->
-            <button class="carousel-btn carousel-btn-prev" onclick="moveCarousel(-1)">
-                ‹
-            </button>
-            <button class="carousel-btn carousel-btn-next" onclick="moveCarousel(1)">
-                ›
-            </button>
-            
-            <!-- Индикаторы -->
-            <div class="carousel-indicators" id="carouselIndicators">
-                <!-- Индикаторы будут добавлены через JavaScript -->
+            <div class="carousel-controls">
+                <button class="carousel-control prev" onclick="scrollCarousel(-300)">‹</button>
+                <button class="carousel-control next" onclick="scrollCarousel(300)">›</button>
             </div>
         </div>
         
@@ -1455,31 +1446,35 @@ function getRiskMeterWidth(riskLevel) {
 </div>
 
 <style>
-/* Стили для карусели */
-.carousel-container {
+.simple-carousel {
     position: relative;
     max-width: 900px;
     margin: 0 auto;
+}
+
+.carousel-wrapper {
     overflow: hidden;
     border-radius: 15px;
 }
 
-.carousel {
-    position: relative;
-    height: 200px;
-    overflow: hidden;
+.carousel-items {
+    display: flex;
+    gap: 20px;
+    padding: 10px;
+    transition: transform 0.3s ease;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
-.carousel-track {
-    display: flex;
-    transition: transform 0.5s ease-in-out;
-    height: 100%;
+.carousel-items::-webkit-scrollbar {
+    display: none;
 }
 
 .carousel-item {
-    flex: 0 0 25%; /* 4 элемента в ряд */
-    padding: 15px;
-    box-sizing: border-box;
+    flex: 0 0 auto;
+    width: 200px;
 }
 
 .carousel-card {
@@ -1512,87 +1507,44 @@ function getRiskMeterWidth(riskLevel) {
     font-size: 1em;
     color: #2d3748;
     font-weight: 600;
+    text-align: center;
 }
 
-/* Кнопки навигации */
-.carousel-btn {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background: white;
+.carousel-controls {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.carousel-control {
+    background: #667eea;
+    color: white;
     border: none;
     width: 40px;
     height: 40px;
     border-radius: 50%;
     font-size: 1.5em;
     cursor: pointer;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    z-index: 10;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.carousel-btn:hover {
-    background: #667eea;
-    color: white;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+.carousel-control:hover {
+    background: #5a67d8;
+    transform: scale(1.1);
 }
 
-.carousel-btn-prev {
-    left: 10px;
-}
-
-.carousel-btn-next {
-    right: 10px;
-}
-
-/* Индикаторы */
-.carousel-indicators {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
-    gap: 8px;
-}
-
-.carousel-indicator {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #cbd5e0;
-    border: none;
-    cursor: pointer;
-    transition: background 0.3s ease;
-}
-
-.carousel-indicator.active {
-    background: #667eea;
-}
-
-/* Адаптивность */
 @media (max-width: 768px) {
     .carousel-item {
-        flex: 0 0 50%; /* 2 элемента в ряд на мобильных */
+        width: 160px;
     }
     
     .carousel-card {
         height: 130px;
         padding: 20px 10px;
-    }
-    
-    .carousel-icon {
-        font-size: 2em;
-    }
-    
-    .carousel-card h4 {
-        font-size: 0.9em;
-    }
-}
-
-@media (max-width: 480px) {
-    .carousel-item {
-        flex: 0 0 100%; /* 1 элемент в ряд на маленьких экранах */
     }
 }
 </style>
@@ -1610,79 +1562,31 @@ const documentTypes = [
     { icon: '🔧', name: 'Технические задания' }
 ];
 
-let currentSlide = 0;
-const slidesToShow = 4; // Количество видимых элементов
-
 // Инициализация карусели
 function initCarousel() {
-    const track = document.getElementById('carouselTrack');
-    const indicators = document.getElementById('carouselIndicators');
+    const container = document.getElementById('carouselItems');
     
-    // Создаем элементы карусели
-    documentTypes.forEach((doc, index) => {
-        const carouselItem = document.createElement('div');
-        carouselItem.className = 'carousel-item';
-        carouselItem.innerHTML = `
+    documentTypes.forEach(doc => {
+        const item = document.createElement('div');
+        item.className = 'carousel-item';
+        item.innerHTML = `
             <div class="carousel-card">
                 <div class="carousel-icon">${doc.icon}</div>
                 <h4>${doc.name}</h4>
             </div>
         `;
-        track.appendChild(carouselItem);
-    });
-    
-    // Создаем индикаторы
-    const totalSlides = Math.ceil(documentTypes.length / slidesToShow);
-    for (let i = 0; i < totalSlides; i++) {
-        const indicator = document.createElement('button');
-        indicator.className = `carousel-indicator ${i === 0 ? 'active' : ''}`;
-        indicator.onclick = () => goToSlide(i);
-        indicators.appendChild(indicator);
-    }
-    
-    updateCarousel();
-}
-
-// Перемещение карусели
-function moveCarousel(direction) {
-    const totalSlides = Math.ceil(documentTypes.length / slidesToShow);
-    currentSlide = (currentSlide + direction + totalSlides) % totalSlides;
-    updateCarousel();
-}
-
-// Переход к конкретному слайду
-function goToSlide(slideIndex) {
-    currentSlide = slideIndex;
-    updateCarousel();
-}
-
-// Обновление карусели
-function updateCarousel() {
-    const track = document.getElementById('carouselTrack');
-    const indicators = document.querySelectorAll('.carousel-indicator');
-    const itemWidth = 100 / slidesToShow;
-    const translateX = -currentSlide * 100;
-    
-    track.style.transform = `translateX(${translateX}%)`;
-    
-    // Обновляем индикаторы
-    indicators.forEach((indicator, index) => {
-        indicator.classList.toggle('active', index === currentSlide);
+        container.appendChild(item);
     });
 }
 
-// Автопрокрутка (опционально)
-function startAutoSlide() {
-    setInterval(() => {
-        moveCarousel(1);
-    }, 5000); // Меняем слайд каждые 5 секунд
+// Прокрутка карусели
+function scrollCarousel(distance) {
+    const container = document.getElementById('carouselItems');
+    container.scrollLeft += distance;
 }
 
-// Инициализируем карусель при загрузке
-document.addEventListener('DOMContentLoaded', function() {
-    initCarousel();
-    // startAutoSlide(); // Раскомментируйте для автопрокрутки
-});
+// Инициализация при загрузке
+document.addEventListener('DOMContentLoaded', initCarousel);
 </script>
             <!-- FAQ Section -->
             <div style="background: #f7fafc; padding: 80px 0;">
