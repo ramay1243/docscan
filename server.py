@@ -1419,49 +1419,271 @@ function getRiskMeterWidth(riskLevel) {
                 </div>
             </div>
 
-                       <!-- Document Types -->
-            <div style="background: #f7fafc; padding: 60px 0;">
-                <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
-                    <h3 style="text-align: center; margin-bottom: 40px; font-size: 1.8em; color: #2d3748;">Какие документы можно проверить?</h3>
-                    <div class="doc-types">
-                        <div class="doc-type">
-                            <div class="doc-type-icon">📝</div>
-                            <h4>Договоры аренды</h4>
-                        </div>
-                        <div class="doc-type">
-                            <div class="doc-type-icon">💼</div>
-                            <h4>Трудовые контракты</h4>
-                        </div>
-                        <div class="doc-type">
-                            <div class="doc-type-icon">🏠</div>
-                            <h4>Договоры купли-продажи</h4>
-                        </div>
-                        <div class="doc-type">
-                            <div class="doc-type-icon">⚖️</div>
-                            <h4>Юридические соглашения</h4>
-                        </div>
-                        <div class="doc-type">
-                            <div class="doc-type-icon">📊</div>
-                            <h4>Коммерческие предложения</h4>
-                        </div>
-                        <div class="doc-type">
-                            <div class="doc-type-icon">📑</div>
-                            <h4>Деловая переписка</h4>
-                        </div>
-                        <div class="doc-type">
-                            <div class="doc-type-icon">📋</div>
-                            <h4>Публичные оферты</h4>
-                        </div>
-                        <div class="doc-type">
-                            <div class="doc-type-icon">🔧</div>
-                            <h4>Технические задания</h4>
-                        </div>
-                    </div>
-                    <p style="text-align: center; margin-top: 30px; color: #718096; font-size: 1.1em;">
-                        <strong>И любые другие текстовые документы!</strong> AI анализирует суть, а не формат.
-                    </p>
+                       <!-- Document Types Carousel -->
+<div style="background: #f7fafc; padding: 60px 0;">
+    <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
+        <h3 style="text-align: center; margin-bottom: 40px; font-size: 1.8em; color: #2d3748;">
+            Какие документы можно проверить?
+        </h3>
+        
+        <!-- Карусель -->
+        <div class="carousel-container">
+            <div class="carousel" id="docCarousel">
+                <div class="carousel-track" id="carouselTrack">
+                    <!-- Документы будут добавлены через JavaScript -->
                 </div>
             </div>
+            
+            <!-- Кнопки навигации -->
+            <button class="carousel-btn carousel-btn-prev" onclick="moveCarousel(-1)">
+                ‹
+            </button>
+            <button class="carousel-btn carousel-btn-next" onclick="moveCarousel(1)">
+                ›
+            </button>
+            
+            <!-- Индикаторы -->
+            <div class="carousel-indicators" id="carouselIndicators">
+                <!-- Индикаторы будут добавлены через JavaScript -->
+            </div>
+        </div>
+        
+        <p style="text-align: center; margin-top: 30px; color: #718096; font-size: 1.1em;">
+            <strong>И любые другие текстовые документы!</strong> AI анализирует суть, а не формат.
+        </p>
+    </div>
+</div>
+
+<style>
+/* Стили для карусели */
+.carousel-container {
+    position: relative;
+    max-width: 900px;
+    margin: 0 auto;
+    overflow: hidden;
+    border-radius: 15px;
+}
+
+.carousel {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.carousel-track {
+    display: flex;
+    transition: transform 0.5s ease-in-out;
+    height: 100%;
+}
+
+.carousel-item {
+    flex: 0 0 25%; /* 4 элемента в ряд */
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+.carousel-card {
+    background: white;
+    padding: 25px 15px;
+    border-radius: 12px;
+    text-align: center;
+    border-left: 4px solid #667eea;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    height: 150px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.carousel-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+}
+
+.carousel-icon {
+    font-size: 2.5em;
+    margin-bottom: 15px;
+}
+
+.carousel-card h4 {
+    margin: 0;
+    font-size: 1em;
+    color: #2d3748;
+    font-weight: 600;
+}
+
+/* Кнопки навигации */
+.carousel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.5em;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 10;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.carousel-btn:hover {
+    background: #667eea;
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.carousel-btn-prev {
+    left: 10px;
+}
+
+.carousel-btn-next {
+    right: 10px;
+}
+
+/* Индикаторы */
+.carousel-indicators {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    gap: 8px;
+}
+
+.carousel-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #cbd5e0;
+    border: none;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.carousel-indicator.active {
+    background: #667eea;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .carousel-item {
+        flex: 0 0 50%; /* 2 элемента в ряд на мобильных */
+    }
+    
+    .carousel-card {
+        height: 130px;
+        padding: 20px 10px;
+    }
+    
+    .carousel-icon {
+        font-size: 2em;
+    }
+    
+    .carousel-card h4 {
+        font-size: 0.9em;
+    }
+}
+
+@media (max-width: 480px) {
+    .carousel-item {
+        flex: 0 0 100%; /* 1 элемент в ряд на маленьких экранах */
+    }
+}
+</style>
+
+<script>
+// Данные для карусели
+const documentTypes = [
+    { icon: '📝', name: 'Договоры аренды' },
+    { icon: '💼', name: 'Трудовые контракты' },
+    { icon: '🏠', name: 'Договоры купли-продажи' },
+    { icon: '⚖️', name: 'Юридические соглашения' },
+    { icon: '📊', name: 'Коммерческие предложения' },
+    { icon: '📑', name: 'Деловая переписка' },
+    { icon: '📋', name: 'Публичные оферты' },
+    { icon: '🔧', name: 'Технические задания' }
+];
+
+let currentSlide = 0;
+const slidesToShow = 4; // Количество видимых элементов
+
+// Инициализация карусели
+function initCarousel() {
+    const track = document.getElementById('carouselTrack');
+    const indicators = document.getElementById('carouselIndicators');
+    
+    // Создаем элементы карусели
+    documentTypes.forEach((doc, index) => {
+        const carouselItem = document.createElement('div');
+        carouselItem.className = 'carousel-item';
+        carouselItem.innerHTML = `
+            <div class="carousel-card">
+                <div class="carousel-icon">${doc.icon}</div>
+                <h4>${doc.name}</h4>
+            </div>
+        `;
+        track.appendChild(carouselItem);
+    });
+    
+    // Создаем индикаторы
+    const totalSlides = Math.ceil(documentTypes.length / slidesToShow);
+    for (let i = 0; i < totalSlides; i++) {
+        const indicator = document.createElement('button');
+        indicator.className = `carousel-indicator ${i === 0 ? 'active' : ''}`;
+        indicator.onclick = () => goToSlide(i);
+        indicators.appendChild(indicator);
+    }
+    
+    updateCarousel();
+}
+
+// Перемещение карусели
+function moveCarousel(direction) {
+    const totalSlides = Math.ceil(documentTypes.length / slidesToShow);
+    currentSlide = (currentSlide + direction + totalSlides) % totalSlides;
+    updateCarousel();
+}
+
+// Переход к конкретному слайду
+function goToSlide(slideIndex) {
+    currentSlide = slideIndex;
+    updateCarousel();
+}
+
+// Обновление карусели
+function updateCarousel() {
+    const track = document.getElementById('carouselTrack');
+    const indicators = document.querySelectorAll('.carousel-indicator');
+    const itemWidth = 100 / slidesToShow;
+    const translateX = -currentSlide * 100;
+    
+    track.style.transform = `translateX(${translateX}%)`;
+    
+    // Обновляем индикаторы
+    indicators.forEach((indicator, index) => {
+        indicator.classList.toggle('active', index === currentSlide);
+    });
+}
+
+// Автопрокрутка (опционально)
+function startAutoSlide() {
+    setInterval(() => {
+        moveCarousel(1);
+    }, 5000); // Меняем слайд каждые 5 секунд
+}
+
+// Инициализируем карусель при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    initCarousel();
+    // startAutoSlide(); // Раскомментируйте для автопрокрутки
+});
+</script>
             <!-- FAQ Section -->
             <div style="background: #f7fafc; padding: 80px 0;">
                 <div style="max-width: 800px; margin: 0 auto; padding: 0 20px;">
